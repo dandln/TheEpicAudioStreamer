@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using DSharpPlus;
@@ -9,8 +10,6 @@ using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-
-using System.Collections.Generic;
 
 namespace TheEpicAudioStreamer
 {
@@ -54,7 +53,6 @@ namespace TheEpicAudioStreamer
 
             // Indicate the use of VoiceNext
             Discord.UseVoiceNext();
-
         }
 
         /// <summary>
@@ -73,6 +71,7 @@ namespace TheEpicAudioStreamer
     {
         // Create Discord embed.
         protected DiscordEmbedBuilder _embed;
+        private readonly string cmdPrefix;
 
         /// <summary>
         /// Creates an help formatter object and configures basic layout options for the embed.
@@ -86,9 +85,10 @@ namespace TheEpicAudioStreamer
                 Title = "TheEpicAudioStreamer",
                 Footer = new DiscordEmbedBuilder.EmbedFooter()
                 {
-                    Text = "ver 0.1.0"
+                    Text = "ver 0.2.0"
                 }
             };
+            cmdPrefix = ctx.Prefix;
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace TheEpicAudioStreamer
         /// </summary>
         public override BaseHelpFormatter WithCommand(Command command)
         {
-            _embed.Description += "`!" + command.Name + "` - " + command.Description + "\n";
+            _embed.Description += "`" + cmdPrefix + command.Name + "` - " + command.Description + "\n";
 
             return this;
         }
@@ -108,7 +108,7 @@ namespace TheEpicAudioStreamer
         {
             foreach (var cmd in cmds)
             {
-                _embed.Description += "`!" + cmd.Name + "` - " + cmd.Description + "\n";
+                _embed.Description += "`" + cmdPrefix + cmd.Name + "` - " + cmd.Description + "\n";
             }
 
             return this;

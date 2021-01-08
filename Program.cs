@@ -13,35 +13,46 @@ namespace TheEpicAudioStreamer
         /// </summary>
         public class Options
         {
-            [Option('t', "tokenfile", Default = "bottoken.txt", HelpText = "Path to a text file that contains the Discord bot token.")]
+            [Option('t', "token", Default = "bottoken.txt", HelpText = "The Discord bot token or a path to a text file that contains the Discord bot token.")]
             public string Token { get; set; }
+
+            [Option('p', "prefix", Default = "!", HelpText = "The command prefix used for the bot to recognise commands.")]
+            public string Prefix { get; set; }
         }
 
         static void Main(string[] args)
         {
             // Print welcome message.
-            Console.WriteLine("#####################################################\n" +
-                "##              TheEpicAudioStreamer               ##\n" +
-                "##               by Daniel Sonntag                 ##\n" +
-                "##                    v0.1.0                       ##\n" +
-                "##    A Discord bot that streams audio from an     ##\n" +
-                "##         local device to a voice cahnnel.        ##\n" +
-                "#####################################################\n");
+            Console.WriteLine(
+                "―――――――――――――――――――――――――――――――――――――――――――\n" +
+                " TheEpicAudioStreamer                      \n" +
+                "――――――――――――――v0.2.0――by @TheEpicSnowWolf―― \n");
 
-            // Parse bot token
+            // Parse command line options
             string BotToken = "";
+            string Prefix = "";
             CommandLine.Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(o =>
             {
-                // Read bot token file and exit if file not found.
+                // Check if token file exists or validate passed bot token instead.
                 try
                 {
                     BotToken = File.ReadAllText(o.Token);
                 }
                 catch (FileNotFoundException)
                 {
-                    Console.WriteLine("ERROR: Bot token file not found. Exiting...");
-                    return;
+                    if (o.Token.Length == 59 && o.Token.Contains('.'))
+                    {
+                        BotToken = o.Token;
+                    }
+                    else
+                    {
+                        Console.WriteLine("ERROR: Bot token file not found and no valid token given. Exiting...");
+                        return;
+                    }
                 }
+
+                // Parse given prefix.
+                Prefix = o.Prefix;
             });
             if (BotToken == "")
             {
@@ -60,7 +71,7 @@ namespace TheEpicAudioStreamer
             // Create Discord commands configuration
             CommandsNextConfiguration cmdsConfig = new CommandsNextConfiguration()
             {
-                StringPrefixes = new[] { "!" }
+                StringPrefixes = new[] { Prefix }
             };
 
             // When all options and configurations are parsed, create a new bot object and run it.
