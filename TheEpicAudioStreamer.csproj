@@ -13,7 +13,7 @@
     <PackageReference Include="DSharpPlus" Version="4.0.0-rc1" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="4.0.0-rc1" />
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.0.0-rc1" />
-    <PackageReference Include="NAudio" Version="2.0.0-beta1" />
+    <PackageReference Include="NAudio" Version="2.0.0-beta2" />
   </ItemGroup>
 
 </Project>
