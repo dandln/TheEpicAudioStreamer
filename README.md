@@ -18,7 +18,7 @@ Because the bot naturally needs access to your audio devices, it cannot simply b
 ## Setting Up
 To run the bot, you will need to set up your own application and bot account on the [Discord Developer Portal](https://discord.com/developers/applications). If you already know how to do this, or already have a bot account that you want to use, feel free to skip ahead to ["Running the Bot"](#user-content-running-the-bot).
 1. Go to the [Applications](https://discord.com/developers/applications) section of the Discord Developer Portal, log in to your Discord account if you are not logged in already and click the button "New Application" in the top right corner.
-2. Enter a name for your application, which should be the same as the as the one you want your bot account to have, and click "Create".
+2. Enter a name for your application, which should be the same as the one you want your bot account to have, and click "Create".
 3. You can enter a description and upload an image for your application, this will be displayed when you invite your bot to your server.
 4. Select "Bot" from the settings sidebar, click "Add Bot" and acknowledge the warning with "Yes, do it!"
 5. Head to the "OAuth2" section in the settings sidebar, tick the "bot" checkbox in the "Scopes" panel. Scroll down and make sure the following Bot Permissions are selected: `View Channels`, `Send Messages`, `Embed Links`, `Read Message History`, `Connect`, `Speak`.
@@ -27,7 +27,7 @@ To run the bot, you will need to set up your own application and bot account on 
 
 ## Running the Bot
 1. Download the latest version of the executable from the ["Releases" section of this repository](https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/).
-2. Place a text file called `bottoken.txt` that contains your bot token (gathered in step 7 of ["Setting Up"](#user-content-setting-up)) in the same directory as the executable. Alternatively, you can pass a path to the token file to the application via the `-t` command line argument.
+2. Place a text file called `bottoken.txt` that contains your bot token (gathered in step 7 of ["Setting Up"](#user-content-setting-up)) in the same directory as the executable. Alternatively, you can pass either a path to the token file or the token itself to the application via the `-t` command line argument.
 3. Run the executable.
 4. A list of your active audio output devices will be displayed, type the ID of the audio device that you want to use (the number in square brackets in front of the device name) into the command prompt and press enter. *__DO NOT use the same device that your Discord client uses for output.__ I recommend using a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/), as this will ensure that you always hear the same thing as the others in your voice channel, and you have more control over which applications you stream.*
 5. The application will now connect to your Discord bot and will be ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
@@ -42,13 +42,25 @@ Type these commands in any text channel on your server. The bot listens to comma
 * `!leave` stops streaming and disconnects from the current voice channel.
 * `!help` shows command help in Discord.
 
+*Hint:* You can change the command prefix from `!` to whatever you want via the `-p` command line argument. For example, you could change it to `.` to avoid conflicts with other bots on your server, making the commands `.join` etc.
+
 ## Known Issues
 If you have an unstable internet connection (e.g. lag spikes), the captured audio that the bot was not able to send in time will 'pile up' instead of just being skipped, resulting in your streamed audio being behind what is actually happening on your machine. Even after some lengthy debugging, I was unable to find out whether this issue is caused by DSharpPlus, the Wasapi audio capturing or by my implementation of either, and I could not find a way to fix this yet.
 
 As a workaround, I have implemented the `!refresh` command, which is essentially a shorthand to running `!stop` and `!start` in succession. This should reset the stream to the standard buffer delay of <1 sec.
 
 ## Changelog
-### v0.1.0
+### v0.2.1 - 2021-01-15
+* Added option to pass the bot token directly via command line argument.
+* Added option to change the command prefix via command line argument.
+* Fixed potential memory leak.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc1 | 2.0.0-beta2 | 2.9.0-preview1
+
+### v0.1.0 - 2021-01-02
 * Initial release.
 
 DSharpPlus version | NAudio version | Command Line Parser version
