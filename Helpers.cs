@@ -146,5 +146,33 @@ namespace TheEpicAudioStreamer
             else
                 return true;
         }
+
+        /// <summary>
+        /// Converts audio data captured from a Wasapi device and writes it into a voice transmit sink.
+        /// </summary>
+        /// <param name="s">The sender object.</param>
+        /// <param name="e">The event argumentss.</param>
+        /// <param name="sink">The VoiceTransmitSink instance.</param>
+        /// <param name="device">The audio device.</param>
+        public static async void AudioDataAvilableEventHander(object s, WaveInEventArgs e, VoiceTransmitSink sink, WasapiLoopbackCapture device)
+        {
+            // If audio data is available, convert it into PCM16 format and write it into the stream.
+            if (e.Buffer.Length > 0)
+            {
+                await sink.WriteAsync(ToPCM16(e.Buffer, e.BytesRecorded, device.WaveFormat));
+            }
+        }
+
+        /// <summary>
+        /// Prints error messages to the Discord text channel if any errors occured during audio recording.
+        /// </summary>
+        /// <param name="s">The sender object.</param>
+        /// <param name="e">The event arguments.</param>
+        /// <param name="ctx">The Discord Command Context.</param>
+        public static async void AudioRecordingStoppedEventHandler(object s, StoppedEventArgs e, CommandContext ctx)
+        {
+            if (e.Exception != null)
+                await ctx.RespondAsync(embed: GenerateEmbed(DiscordColor.Red, $"An error occured while capturing audio: '{e.Exception.Message}'"));
+        }
     }
 }

@@ -85,7 +85,7 @@ namespace TheEpicAudioStreamer
                 Title = "TheEpicAudioStreamer",
                 Footer = new DiscordEmbedBuilder.EmbedFooter()
                 {
-                    Text = "ver 0.2.0"
+                    Text = "ver 0.2.1"
                 }
             };
             cmdPrefix = ctx.Prefix;

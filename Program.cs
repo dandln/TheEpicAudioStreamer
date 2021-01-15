@@ -26,7 +26,7 @@ namespace TheEpicAudioStreamer
             Console.WriteLine(
                 "―――――――――――――――――――――――――――――――――――――――――――\n" +
                 " TheEpicAudioStreamer                      \n" +
-                "――――――――――――――v0.2.0――by @TheEpicSnowWolf―― \n");
+                "――――――――――――――v0.2.1――by @TheEpicSnowWolf―― \n");
 
             // Parse command line options
             string BotToken = "";

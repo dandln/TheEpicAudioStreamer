@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using DSharpPlus.VoiceNext;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.CommandsNext.Attributes;
@@ -6,13 +7,19 @@ using DSharpPlus.Entities;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
+
 namespace TheEpicAudioStreamer
 {
     [RequireUserPermissions(DSharpPlus.Permissions.ManageGuild)] // Give only users who have the permission to manage the server the right to execute commands.
     public class BotCommands : BaseCommandModule
     {
+        // Properties set by the audio bot.
         public MMDevice AudioDevice { private get; set; }
         public WasapiLoopbackCapture Capture { private get; set; }
+
+        // Register EventHandlers.
+        private EventHandler<WaveInEventArgs> AudioHandler;
+        private EventHandler<StoppedEventArgs> StoppedHandler;
 
         [Command("join")]
         [Description("Joins the current voice channel.")]
@@ -41,24 +48,15 @@ namespace TheEpicAudioStreamer
             DiscordChannel channel = voicestate.Channel;
             connection = await vnext.ConnectAsync(channel);
 
-            // Open transmit stream and add event handlers for available audio from capture device and recording completion.
+            // Open transmit stream.
             var stream = connection.GetTransmitSink();
-            Capture.DataAvailable += async (s, e) =>
-            {
-                // Convert IEEE Floating Point data from the capture to 16bit PCM.
-                var pcmBuffer = Helpers.ToPCM16(e.Buffer, e.BytesRecorded, Capture.WaveFormat);
 
-                // Write into Transmit Sink if audio data exists.
-                if (pcmBuffer.Length > 0)
-                {
-                    await stream.WriteAsync(pcmBuffer);
-                }
-            };
-            Capture.RecordingStopped += async (s, e) =>
-            {
-                if(e.Exception != null)
-                    await ctx.RespondAsync(embed: Helpers.GenerateEmbed(DiscordColor.Red, $"An error occured while capturing audio: '{e.Exception.Message}'"));
-            };
+            // Subscribe to event handlers for available audio from capture device and recording completion.
+            // Note: This is a little messy, but creates the ability to unsubscribe from the event handler to prevent a memory leak.
+            AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => Helpers.AudioDataAvilableEventHander(s, e, stream, Capture));
+            Capture.DataAvailable += AudioHandler;
+            StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => Helpers.AudioRecordingStoppedEventHandler(s, e, ctx));
+            Capture.RecordingStopped += StoppedHandler;
 
             if (channel.Parent != null)
                 await ctx.RespondAsync(embed: Helpers.GenerateEmbed(DiscordColor.Green, $"Bot connected to '{channel.Name}' in '{channel.Parent.Name}'."));
@@ -145,9 +143,15 @@ namespace TheEpicAudioStreamer
                 return;
             }
 
-            // Stop capturing and disconnect.
+            // Stop capturing.
             if (Capture.CaptureState != CaptureState.Stopped)
                 Capture.StopRecording();
+
+            // Unsubscribe from EventHandlers to prevent memory leak.
+            Capture.DataAvailable -= AudioHandler;
+            Capture.RecordingStopped -= StoppedHandler;
+
+            // Disconnect.
             connection.Disconnect();
             await ctx.RespondAsync(embed: Helpers.GenerateEmbed(DiscordColor.Green, "Disconnected."));
         }
