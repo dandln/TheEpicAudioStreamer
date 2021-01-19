@@ -7,7 +7,6 @@ using DSharpPlus.Entities;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 
-
 namespace TheEpicAudioStreamer
 {
     [RequireUserPermissions(DSharpPlus.Permissions.ManageGuild)] // Give only users who have the permission to manage the server the right to execute commands.
@@ -51,8 +50,8 @@ namespace TheEpicAudioStreamer
             // Open transmit stream.
             var stream = connection.GetTransmitSink();
 
-            // Subscribe to event handlers for available audio from capture device and recording completion.
-            // Note: This is a little messy, but creates the ability to unsubscribe from the event handler to prevent a memory leak.
+            // Subscribe to events for available audio from capture device and recording completion.
+            // Note: This is a little messy, but creates the ability to unsubscribe from the events to prevent a memory leak.
             AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => Helpers.AudioDataAvilableEventHander(s, e, stream, Capture));
             Capture.DataAvailable += AudioHandler;
             StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => Helpers.AudioRecordingStoppedEventHandler(s, e, ctx));
@@ -147,7 +146,7 @@ namespace TheEpicAudioStreamer
             if (Capture.CaptureState != CaptureState.Stopped)
                 Capture.StopRecording();
 
-            // Unsubscribe from EventHandlers to prevent memory leak.
+            // Unsubscribe from events to prevent memory leak.
             Capture.DataAvailable -= AudioHandler;
             Capture.RecordingStopped -= StoppedHandler;
 
