@@ -78,11 +78,7 @@ namespace TheEpicAudioStreamer
             _embed = new DiscordEmbedBuilder()
             {
                 Color = DiscordColor.CornflowerBlue,
-                Title = "TheEpicAudioStreamer",
-                Footer = new DiscordEmbedBuilder.EmbedFooter()
-                {
-                    Text = "ver 0.2.1"
-                }
+                Title = "TheEpicAudioStreamer"
             };
             cmdPrefix = ctx.Prefix;
         }
