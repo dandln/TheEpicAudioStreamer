@@ -32,7 +32,7 @@ To run the bot, you will need to set up your own application and bot account on 
 4. A list of your active audio output devices will be displayed, type the ID of the audio device that you want to use (the number in square brackets in front of the device name) into the command prompt and press enter. *__DO NOT use the same device that your Discord client uses for output.__ I recommend using a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/), as this will ensure that you always hear the same thing as the others in your voice channel, and you have more control over which applications you stream.*
 5. The application will now connect to your Discord bot and will be ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
 
-## Commands
+## Discord Commands
 Type these commands in any text channel on your server. The bot listens to commands from any user who has the "Manage Server" permission.
 * `!join` joins the current voice channel.
 * `!start` starts streaming. Needs to be connected to a voice channel first.
@@ -42,14 +42,30 @@ Type these commands in any text channel on your server. The bot listens to comma
 * `!leave` stops streaming and disconnects from the current voice channel.
 * `!help` shows command help in Discord.
 
-*Hint:* You can change the command prefix from `!` to whatever you want via the `-p` command line argument. For example, you could change it to `.` to avoid conflicts with other bots on your server, making the commands `.join` etc.
+You can change the command prefix from `!` to whatever you want via the `-p` command line argument. For example, you could change it to `.` to avoid conflicts with other bots on your server, making the commands `.join` etc.
 
 ## Known Issues
 If you have an unstable internet connection (e.g. lag spikes), the captured audio that the bot was not able to send in time will 'pile up' instead of just being skipped, resulting in your streamed audio being behind what is actually happening on your machine. Even after some lengthy debugging, I was unable to find out whether this issue is caused by DSharpPlus, the Wasapi audio capturing or by my implementation of either, and I could not find a way to fix this yet.
 
 As a workaround, I have implemented the `!refresh` command, which is essentially a shorthand to running `!stop` and `!start` in succession. This should reset the stream to the standard buffer delay of <1 sec.
 
+## Command Line Arguments:
+TheEpicAudioStreamer supports the following command line arguments:
+* `-t` - Either a path to a text file that contains the bot token or the string of the bot token to use instead of the default token file.
+* `-p` - A custom command prefix to use within Discord instead of `!`.
+* `-d` - A friendly device name (the string in brackets in the device list) to use as a device. If a valid name is given, this skips the user prompt to select a device on application startup.
+* `-v` - Enables debug messages from DSharpPlus.
+
 ## Changelog
+### v0.3.0 - 2021-02-06
+* Added `-d` command line option to pass a friendly device name to application for use to skip manual selection.
+* Added `-v` command line option to display debug messages from DSharpPlus.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc1 | 2.0.0 | 2.9.0-preview1
+
 ### v0.2.1 - 2021-01-15
 * Added option to pass the bot token directly via command line argument.
 * Added option to change the command prefix via command line argument.
