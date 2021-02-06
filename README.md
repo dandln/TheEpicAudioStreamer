@@ -11,9 +11,10 @@ Because the bot naturally needs access to your audio devices, it cannot simply b
 ## Contents of this Readme
 1. [Setting Up](#user-content-setting-up)
 2. [Running the Bot](#user-content-running-the-bot)
-3. [Commands](#user-content-commands)
+3. [Discord Commands](#user-content-discord-commands)
 4. [Known Issues](#user-content-known-issues)
-5. [Changelog](#user-content-changelog)
+5. [Command Line Arguments](#user-content-command-line-arguments)
+6. [Changelog](#user-content-changelog)
 
 ## Setting Up
 To run the bot, you will need to set up your own application and bot account on the [Discord Developer Portal](https://discord.com/developers/applications). If you already know how to do this, or already have a bot account that you want to use, feel free to skip ahead to ["Running the Bot"](#user-content-running-the-bot).
@@ -58,7 +59,7 @@ TheEpicAudioStreamer supports the following command line arguments:
 
 ## Changelog
 ### v0.3.0 - 2021-02-06
-* Added `-d` command line option to pass a friendly device name to application for use to skip manual selection.
+* Added `-d` command line option to pass a friendly device name to the application for use to skip manual selection.
 * Added `-v` command line option to display debug messages from DSharpPlus.
 * Updated dependencies.
 
