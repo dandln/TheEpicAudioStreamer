@@ -22,6 +22,9 @@ namespace TheEpicAudioStreamer
 
             [Option('d', "device", Default = "", HelpText = "Preselect an audio device by its friendly name.")]
             public string PreSeDeviceName { get; set; }
+
+            [Option('v', "verbose", Required = false, HelpText = "Enables debug messages from DSharpPlus.")]
+            public bool Verbose { get; set; }
         }
 
         static void Main(string[] args)
@@ -36,6 +39,7 @@ namespace TheEpicAudioStreamer
             string BotToken = "";
             string Prefix = "";
             string AudioDeviceName = "";
+            bool Verbose = false;
             CommandLine.Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(o =>
             {
                 // Check if token file exists or validate passed bot token instead.
@@ -59,8 +63,11 @@ namespace TheEpicAudioStreamer
                 // Parse given prefix.
                 Prefix = o.Prefix;
 
-                // Parse given audio device
+                // Parse given audio device.
                 AudioDeviceName = o.PreSeDeviceName;
+
+                // Parse verbose option.
+                Verbose = o.Verbose;
             });
 
             if (BotToken == "")
@@ -82,9 +89,13 @@ namespace TheEpicAudioStreamer
             DiscordConfiguration config = new DiscordConfiguration()
             {
                 Token = BotToken,
-                TokenType = TokenType.Bot,
-                MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Information
+                TokenType = TokenType.Bot
             };
+
+            if (Verbose)
+                config.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug;
+            else
+                config.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Information;
 
             // Create Discord commands configuration
             CommandsNextConfiguration cmdsConfig = new CommandsNextConfiguration()
