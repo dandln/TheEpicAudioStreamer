@@ -18,26 +18,46 @@ namespace TheEpicAudioStreamer
         /// <summary>
         /// Prompts the user to select an audio playback device in the command console.
         /// </summary>
+        /// <param name="deviceName">Optional: The friendly device name already preselected by the user.</param>
         /// <returns>The audio device, or null if no valid device was selected.</returns>
-        public static MMDevice SelectDevice()
+        public static MMDevice SelectDevice(string deviceName = "")
         {
-            // Prompt to select audio device.
-            Console.WriteLine("Please type the ID of the audio device you want to stream from:");
-
             ArrayList devices = new ArrayList();
-
-            // Display devices and populate ArrayList with Device IDs.
             var enumerator = new MMDeviceEnumerator();
+            MMDevice audioDevice;
+            int userDeviceID;
+
+            // Populate ArrayList with Device IDs.
             foreach (var wasapi in enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active))
             {
                 devices.Add(wasapi.ID);
-                Console.WriteLine($"[{devices.IndexOf(wasapi.ID)}] {wasapi.FriendlyName}");
             }
 
-            int userDeviceID;
-            MMDevice audioDevice;
+            // If a preselected device name is given, use this device.
+            if (deviceName != "")
+            {
+                foreach (string deviceID in devices)
+                {
+                    MMDevice device = enumerator.GetDevice(deviceID);
+                    if (deviceName == device.DeviceFriendlyName)
+                    {
+                        // Device name found in list.
+                        Console.WriteLine($"The device \"{device.FriendlyName}\" is being used in this session as per command line argument.\n");
+                        audioDevice = device;
+                        return audioDevice;
+                    }
+                }
+                // A device name was given, but it is invalid.
+                Console.WriteLine($"\"{deviceName}\" was given as a device name via command line argument, but it either does not exist or is unavailable.\n");
+            }
 
             // Prompt user to select a readable device ID.
+            Console.WriteLine("Please type the ID of the audio device you want to stream from:");
+            foreach (string deviceID in devices)
+            {
+                MMDevice device = enumerator.GetDevice(deviceID);
+                Console.WriteLine($"[{devices.IndexOf(device.ID)}] {device.DeviceFriendlyName} - {device.FriendlyName}");
+            }
             Console.Write("> ");
             string userInput = Console.ReadLine();
 

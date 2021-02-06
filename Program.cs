@@ -3,6 +3,7 @@ using System.IO;
 using CommandLine;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
+using NAudio.CoreAudioApi;
 
 namespace TheEpicAudioStreamer
 {
@@ -18,19 +19,23 @@ namespace TheEpicAudioStreamer
 
             [Option('p', "prefix", Default = "!", HelpText = "The command prefix used for the bot to recognise commands.")]
             public string Prefix { get; set; }
+
+            [Option('d', "device", Default = "", HelpText = "Preselect an audio device by its friendly name.")]
+            public string PreSeDeviceName { get; set; }
         }
 
         static void Main(string[] args)
         {
             // Print welcome message.
             Console.WriteLine(
-                "―――――――――――――――――――――――――――――――――――――――――――\n" +
+                "-------------------------------------------\n" +
                 " TheEpicAudioStreamer                      \n" +
-                "――――――――――――――v0.2.1――by @TheEpicSnowWolf―― \n");
+                "-------------v0.3.0--by @TheEpicSnowWolf-- \n");
 
             // Parse command line options
             string BotToken = "";
             string Prefix = "";
+            string AudioDeviceName = "";
             CommandLine.Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(o =>
             {
                 // Check if token file exists or validate passed bot token instead.
@@ -53,11 +58,24 @@ namespace TheEpicAudioStreamer
 
                 // Parse given prefix.
                 Prefix = o.Prefix;
+
+                // Parse given audio device
+                AudioDeviceName = o.PreSeDeviceName;
             });
+
             if (BotToken == "")
             {
                 Console.WriteLine("ERROR: Empty bot token. Exiting...");
                 return;
+            }
+
+            // Get an audio device from the user
+            MMDevice AudioDevice;
+            AudioDevice = Helpers.SelectDevice(AudioDeviceName);
+            while (AudioDevice == null)
+            {
+                Console.WriteLine("No valid audio device selected. Try again.\n");
+                AudioDevice = Helpers.SelectDevice(AudioDeviceName);
             }
 
             // Create Discord configuration
@@ -75,7 +93,7 @@ namespace TheEpicAudioStreamer
             };
 
             // When all options and configurations are parsed, create a new bot object and run it.
-            AudioBot bot = new AudioBot(config, cmdsConfig);
+            AudioBot bot = new AudioBot(config, cmdsConfig, AudioDevice);
             bot.RunBot().GetAwaiter().GetResult();
         }
     }

@@ -23,15 +23,11 @@ namespace TheEpicAudioStreamer
         /// </summary>
         /// <param name="config">A valid DiscordConfiguration object, including the bot token and other settings.</param>
         /// <param name="cmdsConfig">A valid CommandsNextConfiguration object, including prefix and other settings, but NO services.</param>
-        public AudioBot(DiscordConfiguration config, CommandsNextConfiguration cmdsConfig)
+        /// <param name="audioDevice">The audio device to use for this session.</param>
+        public AudioBot(DiscordConfiguration config, CommandsNextConfiguration cmdsConfig, MMDevice audioDevice)
         {
-            // Get an audio device from the user
-            AudioDevice = Helpers.SelectDevice();
-            while (AudioDevice == null)
-            {
-                Console.WriteLine("No valid audio device selected. Try again.\n");
-                AudioDevice = Helpers.SelectDevice();
-            }
+            // Assign audio device.
+            AudioDevice = audioDevice;
 
             // Create client object.
             Discord = new DiscordClient(config);
