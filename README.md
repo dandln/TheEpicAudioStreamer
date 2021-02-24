@@ -55,9 +55,18 @@ TheEpicAudioStreamer supports the following command line arguments:
 * `-t` - Either a path to a text file that contains the bot token or the string of the bot token to use instead of the default token file.
 * `-p` - A custom command prefix to use within Discord instead of `!`.
 * `-d` - A friendly device name (the string in brackets in the device list) to use as a device. If a valid name is given, this skips the user prompt to select a device on application startup.
+* `-a` - A Discord user that the bot should accept commands from, in addition to server owners. Format: <Username>#<Discriminator>
 * `-v` - Enables debug messages from DSharpPlus.
 
 ## Changelog
+### v0.4.0 - 2021-02-24
+* Added `-a` command line option to specify a user that the bot should accept commands from, in addition to server owners.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc2 | 2.0.0 | 2.9.0-preview1
+
 ### v0.3.0 - 2021-02-06
 * Added `-d` command line option to pass a friendly device name to the application for use to skip manual selection.
 * Added `-v` command line option to display debug messages from DSharpPlus.
