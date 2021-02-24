@@ -24,7 +24,7 @@ namespace TheEpicAudioStreamer
         /// <param name="config">A valid DiscordConfiguration object, including the bot token and other settings.</param>
         /// <param name="cmdsConfig">A valid CommandsNextConfiguration object, including prefix and other settings, but NO services.</param>
         /// <param name="audioDevice">The audio device to use for this session.</param>
-        public AudioBot(DiscordConfiguration config, CommandsNextConfiguration cmdsConfig, MMDevice audioDevice)
+        public AudioBot(DiscordConfiguration config, CommandsNextConfiguration cmdsConfig, MMDevice audioDevice, string adminUserName)
         {
             // Assign audio device.
             AudioDevice = audioDevice;
@@ -39,6 +39,7 @@ namespace TheEpicAudioStreamer
             var services = new ServiceCollection()
                 .AddSingleton<MMDevice>(AudioDevice)
                 .AddSingleton<WasapiLoopbackCapture>(capture)
+                .AddSingleton<string>(adminUserName)
                 .BuildServiceProvider();
             cmdsConfig.Services = services;
 

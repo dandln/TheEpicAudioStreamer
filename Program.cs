@@ -23,6 +23,9 @@ namespace TheEpicAudioStreamer
             [Option('d', "device", Default = "", HelpText = "Preselect an audio device by its friendly name.")]
             public string PreSeDeviceName { get; set; }
 
+            [Option('a', "admin", Default = "", HelpText = "Specify a Discord user that the bot should accept commands from, in addition to server owners. Format: <Username>#<Discriminator>")]
+            public string AdminUserName { get; set; }
+
             [Option('v', "verbose", Required = false, HelpText = "Enables debug messages from DSharpPlus.")]
             public bool Verbose { get; set; }
         }
@@ -33,12 +36,13 @@ namespace TheEpicAudioStreamer
             Console.WriteLine(
                 "-------------------------------------------\n" +
                 " TheEpicAudioStreamer                      \n" +
-                "-------------v0.3.0--by @TheEpicSnowWolf-- \n");
+                "-------------v0.4.0--by @TheEpicSnowWolf-- \n");
 
             // Parse command line options
             string BotToken = "";
             string Prefix = "";
             string AudioDeviceName = "";
+            string AdminUserName = "";
             bool Verbose = false;
             CommandLine.Parser.Default.ParseArguments<Options>(args).WithParsed<Options>(o =>
             {
@@ -66,6 +70,9 @@ namespace TheEpicAudioStreamer
                 // Parse given audio device.
                 AudioDeviceName = o.PreSeDeviceName;
 
+                // Parse admin username.
+                AdminUserName = o.AdminUserName;
+
                 // Parse verbose option.
                 Verbose = o.Verbose;
             });
@@ -75,6 +82,9 @@ namespace TheEpicAudioStreamer
                 Console.WriteLine("ERROR: Empty bot token. Exiting...");
                 return;
             }
+
+            if (AdminUserName != "")
+                Console.WriteLine($"The bot will accept commands from user {AdminUserName}.");
 
             // Get an audio device from the user
             MMDevice AudioDevice;
@@ -104,7 +114,7 @@ namespace TheEpicAudioStreamer
             };
 
             // When all options and configurations are parsed, create a new bot object and run it.
-            AudioBot bot = new AudioBot(config, cmdsConfig, AudioDevice);
+            AudioBot bot = new AudioBot(config, cmdsConfig, AudioDevice, AdminUserName);
             bot.RunBot().GetAwaiter().GetResult();
         }
     }
