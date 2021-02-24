@@ -9,7 +9,6 @@ using NAudio.Wave;
 
 namespace TheEpicAudioStreamer
 {
-    [RequireUserPermissions(DSharpPlus.Permissions.ManageGuild)] // Give only users who have the permission to manage the server the right to execute commands.
     public class BotCommands : BaseCommandModule
     {
         // Properties set by the audio bot.
