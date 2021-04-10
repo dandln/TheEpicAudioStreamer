@@ -1,12 +1,12 @@
 # TheEpicAudioStreamer
-This simple Discord bot application uses [DSharpPlus](https://github.com/DSharpPlus/DSharpPlus) and [NAudio](https://github.com/naudio/NAudio) to stream audio directly from a local device to a voice channel in real time.
+This simple Discord bot application uses [DSharpPlus](https://github.com/DSharpPlus/DSharpPlus) and [NAudio](https://github.com/naudio/NAudio) to stream audio directly from a local output device to a voice channel in real time.
 
-Because the bot naturally needs access to your audio devices, it cannot simply be invited to your server like most other bots. Instead, you will need to host the bot yourself on the machine that you want to stream audio with.
+Because the bot needs access to your audio devices, it cannot simply be invited to your server like most other bots. Instead, you will need to host the bot yourself on the machine that you want to stream audio from.
 
 ### System Requirements
 * Windows 10
-* [.NET Core 3.1 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet-core/current/runtime)
-* A stable internet connection
+* [.NET Core 3.1 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet-core/current/runtime) (not required if self contained executable is used)
+* A stable internet connection (see ["Known Issues"](#user-content-known-issues))
 
 ## Contents of this Readme
 1. [Setting Up](#user-content-setting-up)
@@ -31,10 +31,10 @@ To run the bot, you will need to set up your own application and bot account on 
 2. Place a text file called `bottoken.txt` that contains your bot token (gathered in step 7 of ["Setting Up"](#user-content-setting-up)) in the same directory as the executable. Alternatively, you can pass either a path to the token file or the token itself to the application via the `-t` command line argument.
 3. Run the executable.
 4. A list of your active audio output devices will be displayed, type the ID of the audio device that you want to use (the number in square brackets in front of the device name) into the command prompt and press enter. *__DO NOT use the same device that your Discord client uses for output.__ I recommend using a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/), as this will ensure that you always hear the same thing as the others in your voice channel, and you have more control over which applications you stream.*
-5. The application will now connect to your Discord bot and will be ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
+5. The application will now connect to your Discord bot and is ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
 
 ## Discord Commands
-Type these commands in any text channel on your server. The bot listens to commands from any user who has the "Manage Server" permission.
+Type these commands in any text channel on your server. The bot listens to commands from any user who has the "Manage Server" permission and optionally a user specified through [command line arguments](#user-content-command-line-arguments).
 * `!join` joins the current voice channel.
 * `!start` starts streaming. Needs to be connected to a voice channel first.
 * `!joinst` joins the current voice channel and immediately starts streaming.
@@ -55,7 +55,7 @@ TheEpicAudioStreamer supports the following command line arguments:
 * `-t` - Either a path to a text file that contains the bot token or the string of the bot token to use instead of the default token file.
 * `-p` - A custom command prefix to use within Discord instead of `!`.
 * `-d` - A friendly device name (the string in brackets in the device list) to use as a device. If a valid name is given, this skips the user prompt to select a device on application startup.
-* `-a` - A Discord user that the bot should accept commands from, in addition to server managers. Format: <Username>#<Discriminator>
+* `-a` - A Discord user that the bot should accept commands from, in addition to server managers. Format: `<Username>#<Discriminator>`
 * `-v` - Enables debug messages from DSharpPlus.
 
 ## Changelog
