@@ -65,7 +65,7 @@ TheEpicAudioStreamer supports the following command line arguments:
 
 DSharpPlus version | NAudio version | Command Line Parser version
 ------------------ | -------------- | ---------------------------
-4.0.0 | 2.0.0 | 2.9.0-preview1
+4.0.0-rc3 | 2.0.0 | 2.9.0-preview1
 
 ### v0.4.0 - 2021-02-24
 * Added `-a` command line option to specify a user that the bot should accept commands from, in addition to server managers.
