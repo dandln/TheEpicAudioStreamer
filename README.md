@@ -59,6 +59,14 @@ TheEpicAudioStreamer supports the following command line arguments:
 * `-v` - Enables debug messages from DSharpPlus.
 
 ## Changelog
+### v0.4.1 - 2021-04-16
+* Added simple version check on startup.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0 | 2.0.0 | 2.9.0-preview1
+
 ### v0.4.0 - 2021-02-24
 * Added `-a` command line option to specify a user that the bot should accept commands from, in addition to server managers.
 * Updated dependencies.
