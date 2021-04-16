@@ -36,7 +36,15 @@ namespace TheEpicAudioStreamer
             Console.WriteLine(
                 "-------------------------------------------\n" +
                 " TheEpicAudioStreamer                      \n" +
-                "-------------v0.4.0--by @TheEpicSnowWolf-- \n");
+                "------------v" + System.Reflection.Assembly.GetEntryAssembly().GetName().Version.ToString() + "--by @TheEpicSnowWolf-- \n");
+
+            // Check for updates.
+            if (Helpers.UpdateAvailable() == true)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("A newer version of this application is available. Please download it from the Releases section on GitHub:\nhttps://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/\n");
+                Console.ResetColor();
+            }
 
             // Parse command line options
             string BotToken = "";

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.IO;
+using System.Net;
+using System.Text.RegularExpressions;
 using DSharpPlus.CommandsNext;
 using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
@@ -15,6 +17,42 @@ namespace TheEpicAudioStreamer
     /// </summary>
     static class Helpers
     {
+        /// <summary>
+        /// Checks for available updates by looking at the latest release on GitHub.
+        /// </summary>
+        /// <returns>False if version is up to date, true if a newer version is available.</returns>
+        public static bool UpdateAvailable()
+        {
+            string latestReleaseJson = "";
+            try
+            {
+                // Download latest release information from GitHub.
+                using var wc = new WebClient();
+                wc.Headers.Add("User-Agent", "TheEpicAudioStreamer Update Checker");
+                latestReleaseJson = wc.DownloadString("https://api.github.com/repos/theepicsnowwolf/theepicaudiostreamer/releases/latest");
+            }
+            catch(Exception)
+            {
+                return false;   // Update check failed.
+            }
+
+            // Search for latest version.
+            var match = new Regex(@"""tag_name"":""v(.+?)""").Match(latestReleaseJson);
+
+            // Version number not found.
+            if (match.Success == false)
+                    return false;
+
+            string latestVersion = match.Groups[1].Value;
+
+            // Compare latest version to application.
+            var comparison = System.Reflection.Assembly.GetEntryAssembly().GetName().Version.CompareTo(new Version(latestVersion));
+            if (comparison < 0)
+                return true;    // Newer version is available
+            else
+                return false;   // No newer version available
+        }
+
         /// <summary>
         /// Prompts the user to select an audio playback device in the command console.
         /// </summary>
