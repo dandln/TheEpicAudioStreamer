@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0-windows</TargetFramework>
+	<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <Authors>Dan Sonntag</Authors>
     <Company></Company>
     <Version>0.5.0</Version>
