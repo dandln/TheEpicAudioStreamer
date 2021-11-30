@@ -1,0 +1,56 @@
+# Changelog
+### v0.5.0 - 2021-11-30
+* Restructured project architecture:
+    * Core bot functionality is now provided through a class library.
+    * Console application acts as a wrapper for the library.
+* Migrated the bot to Slash Commands.
+* Removed `-p` command line option as it is no longer needed.
+* Removed `refresh` command.
+* Changed target framework to .NET 6.0.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+ 4.2.0-nightly-01045 | 2.0.1 | 2.9.0-preview1
+
+### v0.4.1 - 2021-04-16
+* Added simple version check on startup.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc3 | 2.0.0 | 2.9.0-preview1
+
+### v0.4.0 - 2021-02-24
+* Added `-a` command line option to specify a user that the bot should accept commands from, in addition to server managers.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc2 | 2.0.0 | 2.9.0-preview1
+
+### v0.3.0 - 2021-02-06
+* Added `-d` command line option to pass a friendly device name to the application for use to skip manual selection.
+* Added `-v` command line option to display debug messages from DSharpPlus.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc1 | 2.0.0 | 2.9.0-preview1
+
+### v0.2.1 - 2021-01-15
+* Added option to pass the bot token directly via command line argument.
+* Added option to change the command prefix via command line argument.
+* Fixed potential memory leak.
+* Updated dependencies.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc1 | 2.0.0-beta2 | 2.9.0-preview1
+
+### v0.1.0 - 2021-01-02
+* Initial release.
+
+DSharpPlus version | NAudio version | Command Line Parser version
+------------------ | -------------- | ---------------------------
+4.0.0-rc1 | 2.0.0-beta1 | 2.9.0-preview1
