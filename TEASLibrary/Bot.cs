@@ -65,13 +65,10 @@ namespace TEASLibrary
             // Register event handler for command errors
             slashCmds.SlashCommandErrored += async (s, e) =>
             {
-                if (e.Exception is not SlashExecutionChecksFailedException)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.Write($"ERROR: ");
-                    Console.ResetColor();
-                    Console.WriteLine($"{e.Context.CommandName} threw the following exception: {e.Exception.GetType()} - {e.Exception.Message}");
-                }
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.Write($"ERROR: ");
+                Console.ResetColor();
+                Console.WriteLine($"{e.Context.CommandName} threw the following exception: {e.Exception.GetType()} - {e.Exception.Message}");
             };
 
             // Indicate the use of VoiceNext

@@ -11,7 +11,8 @@ The bot needs access to your local audio devices and can therefore not simply be
 1. [Setting Up](#user-content-setting-up)
 2. [Running the Bot](#user-content-running-the-bot)
 3. [Discord Commands](#user-content-discord-commands)
-5. [Command Line Arguments](#user-content-command-line-arguments)
+4. [Command Line Arguments](#user-content-command-line-arguments)
+5. [Known Issues](#user-content-known-issues)
 
 ## Setting Up
 To run the bot, you will need to set up your own application and bot account on the [Discord Developer Portal](https://discord.com/developers/applications). If you already know how to do this, or already have a bot account that you want to use, feel free to skip ahead to ["Running the Bot"](#user-content-running-the-bot).
@@ -28,7 +29,7 @@ This gives your bot the following permissions on your server: `Read Messages/Vie
 1. Download the latest version of the executable from the ["Releases" section of this repository](https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/).
 2. Place a text file called `bottoken.txt` that contains your bot token (gathered in step 7 of ["Setting Up"](#user-content-setting-up)) in the same directory as the executable. Alternatively, you can pass either a path to the token file or the token itself to the application via the `-t` command line argument.
 3. Run the executable.
-4. A list of your active audio output devices will be displayed, type the ID of the audio device that you want to use (the number in square brackets in front of the device name) into the command prompt and press enter. *__DO NOT use the same device that your Discord client uses for output.__ I recommend using a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/), as this will ensure that you always hear the same thing as the others in your voice channel, and you have more control over which applications you stream.*
+4. A list of your active audio output devices will be displayed, type the ID of the audio device that you want to use (the number in square brackets in front of the device name) into the command prompt and press enter. I recommend using a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/), as this will ensure that you always hear the same thing as the others in your voice channel, and you have more control over which applications you stream.*
 5. The application will now connect to your Discord bot and is ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
 
 ## Discord Slash Commands
@@ -39,9 +40,12 @@ Type these slash commands in any text channel on your server. The bot listens to
 * `/stop` stops streaming.
 * `/leave` stops streaming and disconnects from the current voice channel.
 
-## Command Line Arguments:
+## Command Line Arguments
 TheEpicAudioStreamer supports the following command line arguments:
 * `-t` - Either a path to a text file that contains the bot token or the string of the bot token to use instead of the default token file.
 * `-d` - A friendly device name (the string in brackets in the device list) to use as a device. If a valid name is given, this skips the user prompt to select a device on application startup.
 * `-a` - A Discord user that the bot should accept commands from, in addition to server managers. Format: `<Username>#<Discriminator>`
 * `-v` - Enables debug messages from DSharpPlus.
+
+## Known Issues
+If the application is restarted shortly after being closed, Discord might throw the error "Invalid interaction application command" when issuing a Slash Command. Weirdly, it sometimes helps to run the `/leave` command. If this works (i.e. the command fails with "Bot is not connected to a voice channel."), other commands will work again as well.
