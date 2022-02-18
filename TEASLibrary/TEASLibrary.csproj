@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
@@ -10,9 +10,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="4.2.0-nightly-01045" />
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.2.0-nightly-01045" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.2.0-nightly-01045" />
+    <PackageReference Include="DSharpPlus" Version="4.2.0-nightly-01072" />
+    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.2.0-nightly-01072" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.2.0-nightly-01072" />
     <PackageReference Include="NAudio" Version="2.0.1" />
   </ItemGroup>
 
