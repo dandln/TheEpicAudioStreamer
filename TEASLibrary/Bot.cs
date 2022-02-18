@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using DSharpPlus;
 using DSharpPlus.SlashCommands;
 using DSharpPlus.Entities;
@@ -36,7 +37,15 @@ namespace TEASLibrary
         private EventHandler<WaveInEventArgs>? AudioHandler;
         private EventHandler<StoppedEventArgs>? StoppedHandler;
 
-        public Bot(string botToken, string adminUserName = "", MMDevice? audioDevice = null, bool verbose = false)
+        /// <summary>
+        /// Constructs a new Bot object with the given parameters.
+        /// </summary>
+        /// <param name="botToken">The Discord bot token to be used with the bot.</param>
+        /// <param name="logFactory">An optional LoggerFactory object that will be passed to DSharpPlus to handle logging of events.</param>
+        /// <param name="adminUserName">An optional Discord name of a user that the bot should accept commands from in addition to server managers.</param>
+        /// <param name="audioDevice">An optionally pre-defined audio device to be used for streaming.</param>
+        /// <param name="verbose">Define whether debug log messages should be displayed. Defaults to false.</param>
+        public Bot(string botToken, ILoggerFactory? logFactory = null, string adminUserName = "", MMDevice? audioDevice = null, bool verbose = false)
         {
             ChangeAudioDevice(audioDevice);
             AdminUserName = adminUserName;
@@ -48,7 +57,11 @@ namespace TEASLibrary
                 TokenType = TokenType.Bot
             };
 
-            // Set debug log level if needed
+            // Set log factory if parameter is not null
+            if (logFactory != null)
+                botConfig.LoggerFactory = logFactory;
+
+            // Set debug log level if verbose is set
             if (verbose == true)
                 botConfig.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug;
 
@@ -62,13 +75,10 @@ namespace TEASLibrary
             });
             slashCmds.RegisterCommands<SlashCommands>();
 
-            // Register event handler for command errors
+            // Register event handler for logging command errors
             slashCmds.SlashCommandErrored += async (s, e) =>
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.Write($"ERROR: ");
-                Console.ResetColor();
-                Console.WriteLine($"{e.Context.CommandName} threw the following exception: {e.Exception.GetType()} - {e.Exception.Message}");
+                Discord.Logger.LogError("{CommandName} threw the following exception: {ExceptionType} - {ExceptionMessage}", e.Context.CommandName, e.Exception.GetType(), e.Exception.Message);
             };
 
             // Indicate the use of VoiceNext
