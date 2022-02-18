@@ -3,6 +3,9 @@ using System.IO;
 using System.Collections.Generic;
 using CommandLine;
 using NAudio.CoreAudioApi;
+using Microsoft.Extensions.Logging;
+using Serilog;
+using Serilog.Core;
 using TEASLibrary;
 
 namespace TEASConsole
@@ -14,36 +17,34 @@ namespace TEASConsole
         /// </summary>
         public class Options
         {
-            [Option('t', "token", Default = "bottoken.txt", HelpText = "The Discord bot token or a path to a text file that contains the Discord bot token.")]
+            [Option('t', "token", Default = "bottoken.txt", HelpText = "The Discord bot token or a path to a text file that contains the Discord bot token")]
             public string Token { get; set; }
 
-            [Option('d', "device", Default = "", HelpText = "Preselect an audio device by its friendly name.")]
+            [Option('d', "device", Default = "", HelpText = "Preselect an audio device by its friendly name")]
             public string PreSeDeviceName { get; set; }
 
             [Option('a', "admin", Default = "", HelpText = "Specify a Discord user that the bot should accept commands from, in addition to server owners. Format: <Username>#<Discriminator>")]
             public string AdminUserName { get; set; }
 
-            [Option('v', "verbose", Required = false, HelpText = "Enables debug messages from DSharpPlus.")]
+            [Option('v', "verbose", Required = false, HelpText = "Enables debug messages")]
             public bool Verbose { get; set; }
         }
 
         static void Main(string[] args)
         {
+            // Initialise Serilog
+            var logLevelSwitch = new LoggingLevelSwitch();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.ControlledBy(logLevelSwitch)
+                .WriteTo.Console()
+                .CreateLogger();
+
             Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
+            Log.Information("Welcome to TEASConsole, version {0}", appVersion.ToString());
 
-            // Print welcome message.
-            Console.WriteLine(
-                "-------------------------------------------\n" +
-                " TheEpicAudioStreamer                      \n" +
-                "------------v" + appVersion.ToString() + "--by @TheEpicSnowWolf-- \n");
-
-            // Check for updates.
+            // Check for updates
             if (Utils.CheckUpdate(appVersion) == 1)
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("A newer version of this application is available. Please download it from the Releases section on GitHub:\nhttps://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/\n");
-                Console.ResetColor();
-            }
+                Log.Warning("A newer version of this application is available. Please download it from the Releases section on GitHub: https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/");
 
             // Parse command line options
             string BotToken = "";
@@ -65,7 +66,7 @@ namespace TEASConsole
                     }
                     else
                     {
-                        Console.WriteLine("ERROR: Bot token file not found and no valid token given. Exiting...");
+                        Log.Error("Bot token file not found and no valid token given");
                         return;
                     }
                 }
@@ -76,14 +77,14 @@ namespace TEASConsole
                 Verbose = o.Verbose;
             });
 
+            if (Verbose)
+                logLevelSwitch.MinimumLevel = Serilog.Events.LogEventLevel.Debug;
+            
             if (BotToken == "")
             {
-                Console.WriteLine("ERROR: Empty bot token. Exiting...");
+                Log.Fatal("Empty bot token. Exiting...");
                 return;
             }
-
-            if (AdminUserName != "")
-                Console.WriteLine($"The bot will accept commands from user {AdminUserName}.");
 
             // Get an audio device from the user
             MMDevice AudioDevice;
@@ -93,9 +94,14 @@ namespace TEASConsole
                 Console.WriteLine("No valid audio device selected. Try again.\n");
                 AudioDevice = SelectDevice(AudioDeviceName);
             }
+            Log.Information("Chosen audio device is {0}", AudioDevice.DeviceFriendlyName);
+
+            if (AdminUserName != "")
+                Log.Information("The bot will accept commands from user {0}", AdminUserName);
 
             // When all options and configurations are parsed, create a new bot object and run it.
-            Bot bot = new(BotToken, AdminUserName, AudioDevice, Verbose);
+            var logFactory = new LoggerFactory().AddSerilog();
+            Bot bot = new(BotToken, logFactory, AdminUserName, AudioDevice, Verbose);
             bot.Connect().GetAwaiter().GetResult();
         }
 
@@ -118,16 +124,16 @@ namespace TEASConsole
 
                 if(audioDevice != null)
                 {
-                    Console.WriteLine($"The device \"{audioDevice.FriendlyName}\" is being used in this session as per command line argument.\n");
+                    Log.Information("The device \"{0}\" is being used in this session as per command line argument", audioDevice.DeviceFriendlyName);
                     return audioDevice;
                 }
 
                 // A device name was given, but it is invalid.
-                Console.WriteLine($"\"{deviceName}\" was given as a device name via command line argument, but it either does not exist or is unavailable.\n");
+                Log.Warning("\"{0}\" was given as a device name via command line argument, but it either does not exist or is unavailable", deviceName);
             }
 
             // Prompt user to select a readable device ID.
-            Console.WriteLine("Please type the ID of the audio device you want to stream from:");
+            Console.WriteLine("\nPlease type the ID of the audio device you want to stream from:");
             foreach (MMDevice device in devicesList)
             {
                 Console.WriteLine($"[{devicesList.IndexOf(device)}] {device.DeviceFriendlyName} - {device.FriendlyName}");

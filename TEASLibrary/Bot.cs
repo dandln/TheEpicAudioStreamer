@@ -75,7 +75,15 @@ namespace TEASLibrary
             });
             slashCmds.RegisterCommands<SlashCommands>();
 
-            // Register event handler for logging command errors
+            // Register event handlers for logging command activity
+            slashCmds.SlashCommandInvoked += async (s, e) =>
+            {
+                Discord.Logger.LogInformation("{CommandName} issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member.Username, e.Context.Member.Discriminator);
+            };
+            slashCmds.SlashCommandExecuted += async (s, e) =>
+            {
+                Discord.Logger.LogDebug("Successfully executed {CommandName}, issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member.Username, e.Context.Member.Discriminator);
+            };
             slashCmds.SlashCommandErrored += async (s, e) =>
             {
                 Discord.Logger.LogError("{CommandName} threw the following exception: {ExceptionType} - {ExceptionMessage}", e.Context.CommandName, e.Exception.GetType(), e.Exception.Message);
