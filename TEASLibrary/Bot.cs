@@ -147,7 +147,7 @@ namespace TEASLibrary
             /// </summary>
             public Bot BotInstance { private get; set; }
 
-            [SlashCommand("join", "Joins the current voice channel.")]
+            [SlashCommand("join", "Join the current voice channel.")]
             public async Task Join(InteractionContext ctx)
             {
                 var vnext = ctx.Client.GetVoiceNext();
@@ -195,7 +195,7 @@ namespace TEASLibrary
                         (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}**.")));
             }
 
-            [SlashCommand("start", "Starts streaming. Needs to be connected to a voice channel first.")]
+            [SlashCommand("start", "Start streaming. Bot needs to be connected to a voice channel.")]
             public async Task Start(InteractionContext ctx)
             {
                 var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
@@ -230,7 +230,7 @@ namespace TEASLibrary
                 }
             }
 
-            [SlashCommand("joinst", "Joins the current voice channel and immediately starts streaming.")]
+            [SlashCommand("joinst", "Join the current voice channel and immediately start streaming.")]
             public async Task Joinst(InteractionContext ctx)
             {
                 var vnext = ctx.Client.GetVoiceNext();
@@ -291,7 +291,7 @@ namespace TEASLibrary
                 }
             }
 
-            [SlashCommand("stop", "Stops streaming.")]
+            [SlashCommand("stop", "Stop streaming.")]
             public async Task Stop(InteractionContext ctx)
             {
                 // Perform feasibility checks
@@ -322,7 +322,7 @@ namespace TEASLibrary
                     (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming.")));
             }
 
-            [SlashCommand("leave", "Stops streaming and disconnects from the current voice channel.")]
+            [SlashCommand("leave", "Stop streaming and disconnect from the current voice channel.")]
             public async Task Leave(InteractionContext ctx)
             {
                 // Perform feasibility checks
