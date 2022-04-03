@@ -10,7 +10,7 @@ The bot needs access to your local audio devices and can therefore not simply be
 ## Contents of this Readme
 1. [Setting Up](#user-content-setting-up)
 2. [Running the Bot](#user-content-running-the-bot)
-3. [Discord Commands](#user-content-discord-commands)
+3. [Discord Commands](#user-content-discord-slash-commands)
 4. [Command Line Arguments](#user-content-command-line-arguments)
 5. [Known Issues](#user-content-known-issues)
 
