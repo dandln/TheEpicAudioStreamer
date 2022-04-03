@@ -1,4 +1,12 @@
 # Changelog
+### v0.5.2 - 2022-04-03
+* Implemented Serilog to facilitate more streamlined logging of both bot and app events.
+* Updated dependencies (fixes and OAuth error in D#+).
+
+DSharpPlus version | NAudio version | Command Line Parser version | Serilog version
+------------------ | -------------- | --------------------------- | ---------------
+ 4.2.0-nightly-01105 | 2.0.1 | 2.9.0-preview1 | 2.10.0
+
 ### v0.5.0 - 2021-11-30
 * Restructured project architecture:
     * Core bot functionality is now provided through a class library.
