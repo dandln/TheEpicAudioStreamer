@@ -13,44 +13,6 @@ namespace TEASLibrary
     public static class Utils
     {
         /// <summary>
-        /// Checks for available updates by looking at the latest release on GitHub.
-        /// </summary>
-        /// <param name="appVersion">The application version to compare to the newest version.</param>
-        /// <returns>1 if a newer version is available, 0 if no newer version is available, -1 if update check resulted in an error.</returns>
-        public static int CheckUpdate(Version appVersion)
-        {
-            string latestReleaseJson = "";
-            try
-            {
-                // Download latest release information from GitHub.
-                using HttpClient client = new HttpClient();
-                client.DefaultRequestHeaders.Add("User-Agent", "TheEpicAudioStreamer Update Checker");
-                latestReleaseJson = client.GetStringAsync("https://api.github.com/repos/theepicsnowwolf/theepicaudiostreamer/releases/latest").Result;
-            }
-            catch (Exception)
-            {
-                return -1;   // Update check failed.
-            }
-
-            // Search for latest version.
-            var match = new Regex(@"""tag_name"":""v(.+?)""").Match(latestReleaseJson);
-
-            // Version number not found.
-            if (match.Success == false)
-                return -1;
-
-            string latestVersion = match.Groups[1].Value;
-
-            // Compare latest version to application.
-            var comparison = appVersion.CompareTo(new Version(latestVersion));
-            if (comparison < 0)
-                return 1;    // Newer version is available
-            else
-                return 0;   // No newer version available
-        }
-
-
-        /// <summary>
         /// Converts an IEEE Floating Point audio buffer into a 16bit PCM compatible buffer.
         /// </summary>
         /// <param name="inputBuffer">The buffer in IEEE Floating Point format.</param>
