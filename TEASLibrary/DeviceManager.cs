@@ -51,5 +51,20 @@ namespace TEASLibrary
             }
             return null;
         }
+
+        /// <summary>
+        /// Searches for a device ID in the list of audio output devices
+        /// </summary>
+        /// <param name="deviceID">The device ID to search for</param>
+        /// <returns>The MMDevice object whose ID matches, or null if it is not in the list</returns>
+        public MMDevice? FindOutputDeviceByDeviceID(string deviceID)
+        {
+            foreach (MMDevice device in OutputDevicesList)
+            {
+                if(device.ID == deviceID)
+                    return device;
+            }
+            return null;
+        }
     }
 }
