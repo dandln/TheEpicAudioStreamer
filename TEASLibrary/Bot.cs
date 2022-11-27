@@ -17,22 +17,22 @@ namespace TEASLibrary
         /// <summary>
         /// The Discord client that the bot can connect to
         /// </summary>
-        private DiscordClient Discord { get; set; }
+        public DiscordClient Discord { get; private set; }
 
         /// <summary>
         /// The audio device that is used for capturing/streaming
         /// </summary>
-        private MMDevice? AudioDevice { get; set; }
+        public MMDevice? AudioDevice { get; private set; }
 
         /// <summary>
         /// The capture instance for the audio device
         /// </summary>
-        private WasapiLoopbackCapture? Capture { get; set; }
+        public WasapiLoopbackCapture? Capture { get; private set; }
 
         /// <summary>
         /// The Discord username of an eligible user that is allowed to control the bot
         /// </summary>
-        private string AdminUserName { get; set; }
+        public string AdminUserName { get; private set; }
 
         private EventHandler<WaveInEventArgs>? AudioHandler;
         private EventHandler<StoppedEventArgs>? StoppedHandler;
@@ -145,28 +145,15 @@ namespace TEASLibrary
             /// </summary>
             public Bot BotInstance { private get; set; }
 
-            [SlashCommand("join", "Join the current voice channel.")]
+            [SlashCommand("join", "Join the current voice channel")]
             public async Task Join(InteractionContext ctx)
             {
                 var vnext = ctx.Client.GetVoiceNext();
                 var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-
-                // Perform feasibility checks
-                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
-                    return;
-                if (connection != null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel.")));
-                    return;
-                }
                 var voicestate = ctx.Member?.VoiceState;
-                if (voicestate?.Channel == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel.")));
+
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions:true, checkBotNotConnected:true, checkUserConnected:true))
                     return;
-                }
 
                 // Connect to voice channel
                 DiscordChannel channel = voicestate.Channel;
@@ -187,152 +174,76 @@ namespace TEASLibrary
 
                 if (channel.Parent != null)
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}** in '{channel.Parent.Name}'.")));
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}** in {channel.Parent.Name}")));
                 else
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}**.")));
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}**")));
             }
 
-            [SlashCommand("start", "Start streaming. Bot needs to be connected to a voice channel.")]
+            [SlashCommand("start", "Start streaming. Bot needs to be connected to a voice channel")]
             public async Task Start(InteractionContext ctx)
             {
                 var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
 
-                // Perform feasibility checks
-                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions:true, checkBotConnected:true, checkDeviceSelected:true, checkBotNotStreaming:true))
                     return;
-                if (connection == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
-                    return;
-                }
-                if (BotInstance.Capture == null || BotInstance.AudioDevice == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
-                    return;
-                }
 
-                // Check whether the bot is already recording, start recording if not
-                if (BotInstance.Capture.CaptureState == CaptureState.Stopped)
-                {
-                    BotInstance.Capture.StartRecording();
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                            (Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice.FriendlyName}**.")));
-                }
-                else
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Already capturing from device.")));
-                }
+                BotInstance.Capture.StartRecording();
+                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
             }
 
-            [SlashCommand("joinst", "Join the current voice channel and immediately start streaming.")]
+            [SlashCommand("joinst", "Join the current voice channel and immediately start streaming")]
             public async Task Joinst(InteractionContext ctx)
             {
                 var vnext = ctx.Client.GetVoiceNext();
                 var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
                 var voicestate = ctx.Member?.VoiceState;
 
-                // Perform feasibility check
-                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions: true, checkUserConnected: true, checkDeviceSelected: true, checkBotNotConnected:true, checkBotNotStreaming:true))
                     return;
-                if (voicestate?.Channel == null)
-                {
+
+                // Connect to voice channel
+                DiscordChannel channel = voicestate.Channel;
+                connection = await vnext.ConnectAsync(channel);
+
+                // Open transmit stream
+                var stream = connection.GetTransmitSink();
+
+                // Initialise new event handlers and subscribe to events for available audio from capture device and recording completion
+                // Note: This is a little messy, but creates the ability to unsubscribe from the events to prevent a memory leak
+                BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
+                BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
+                BotInstance.StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => AudioRecordingStoppedEventHandler(s, e, ctx));
+                BotInstance.Capture.RecordingStopped += BotInstance.StoppedHandler;
+
+                // Start capturing
+                BotInstance.Capture.StartRecording();
+                if (voicestate.Channel.Parent == null)
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel.")));
-                    return;
-                }
-                if (BotInstance.Capture == null || BotInstance.AudioDevice == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
-                    return;
-                }
-
-                if (connection == null)
-                {
-                    // Connect to voice channel
-                    DiscordChannel channel = voicestate.Channel;
-                    connection = await vnext.ConnectAsync(channel);
-
-                    // Open transmit stream
-                    var stream = connection.GetTransmitSink();
-
-                    if (BotInstance.Capture != null && BotInstance.AudioDevice != null)
-                    {
-                        // Initialise new event handlers and subscribe to events for available audio from capture device and recording completion
-                        // Note: This is a little messy, but creates the ability to unsubscribe from the events to prevent a memory leak
-                        BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
-                        BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
-                        BotInstance.StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => AudioRecordingStoppedEventHandler(s, e, ctx));
-                        BotInstance.Capture.RecordingStopped += BotInstance.StoppedHandler;
-                    }
-                }
-
-                // Check whether the bot is already recording, start recording if not
-                if (BotInstance.Capture.CaptureState == CaptureState.Stopped)
-                {
-                    BotInstance.Capture.StartRecording();
-                    if (voicestate.Channel.Parent == null)
-                        await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                            (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**.")));
-                    else
-                        await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                           (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** in **{voicestate.Channel.Parent.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**.")));
-                }
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
                 else
-                {
                     await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Already capturing from device.")));
-                }
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** in **{voicestate.Channel.Parent.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
             }
 
-            [SlashCommand("stop", "Stop streaming.")]
+            [SlashCommand("stop", "Stop streaming")]
             public async Task Stop(InteractionContext ctx)
             {
-                // Perform feasibility checks
-                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions: true, checkBotConnected: true, checkBotStreaming: true))
                     return;
-                if (Utils.CheckConnectionStatus(ctx) == false)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
-                    return;
-                }
-                if (BotInstance.AudioDevice == null || BotInstance.Capture == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected.")));
-                    return;
-                }
-                if (BotInstance.Capture.CaptureState != CaptureState.Capturing)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming.")));
-                    return;
-                }
 
                 // Stop capturing
                 BotInstance.Capture.StopRecording();
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                    (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming.")));
+                    (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming")));
             }
 
-            [SlashCommand("leave", "Stop streaming and disconnect from the current voice channel.")]
+            [SlashCommand("leave", "Stop streaming and disconnect from the current voice channel")]
             public async Task Leave(InteractionContext ctx)
             {
-                // Perform feasibility checks
-                var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-                if (!CheckPermissions(ctx, BotInstance.AdminUserName))
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions: true, checkBotConnected: true))
                     return;
-                if (connection == null)
-                {
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel.")));
-                    return;
-                }
 
                 // Stop capturing
                 if (BotInstance.Capture != null && BotInstance.Capture.CaptureState != CaptureState.Stopped)
@@ -348,29 +259,11 @@ namespace TEASLibrary
                     BotInstance.AudioHandler = null;
                     BotInstance.StoppedHandler = null;
                 }
-
+                
                 // Disconnect
-                connection.Disconnect();
+                ctx.Client.GetVoiceNext().GetConnection(ctx.Guild).Disconnect();
                 await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                    (Utils.GenerateEmbed(DiscordColor.Green, "Disconnected.")));
-            }
-
-            /// <summary>
-            /// Checks whether the user has permissions to execute the command
-            /// </summary>
-            /// <param name="ctx">The InteractionContext of the command</param>
-            /// <param name="adminUsername">The username of the potentially non-privileged user that is allowed to execute commands</param>
-            /// <returns>True if the user can execute the command, false if not</returns>
-            private static bool CheckPermissions(InteractionContext ctx, string adminUsername)
-            {
-                if (ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) || ctx.Member.Username + "#" + ctx.Member.Discriminator == adminUsername)
-                    return true;
-                else
-                {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today.")));
-                    return false;
-                }
+                    (Utils.GenerateEmbed(DiscordColor.Green, "Disconnected")));
             }
 
             /// <summary>
