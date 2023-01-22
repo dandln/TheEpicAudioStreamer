@@ -46,7 +46,7 @@ namespace TEASConsole
 
             // Check for updates
             if (CheckUpdate(appVersion) == 1)
-                Log.Warning("A newer version of TEASConsole is available. Please download it from the Releases section on GitHub: https://github.com/TheEpicSnowWolf/TheEpicAudioStreamer/releases/");
+                Log.Warning("A newer version of TEASConsole is available. Please download it from the Releases section on GitHub: https://github.com/dandln/TheEpicAudioStreamer/releases/");
 
             // Parse command line options
             string BotToken = "";
@@ -119,8 +119,8 @@ namespace TEASConsole
             {
                 // Download latest release information from GitHub
                 using HttpClient client = new HttpClient();
-                client.DefaultRequestHeaders.Add("User-Agent", "TheEpicAudioStreamer Update Checker");
-                latestReleaseJson = client.GetStringAsync("https://api.github.com/repos/theepicsnowwolf/theepicaudiostreamer/releases/latest").Result;
+                client.DefaultRequestHeaders.Add("User-Agent", "TEASConsole Update Checker");
+                latestReleaseJson = client.GetStringAsync("https://api.github.com/repos/dandln/theepicaudiostreamer/releases/latest").Result;
             }
             catch (Exception)
             {
