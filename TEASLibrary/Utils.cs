@@ -82,8 +82,11 @@ namespace TEASLibrary
 
             if (checkPermissions)
             {
-                // Return false if user is not server manager or flagged as an admin user
-                if (!ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) && ctx.Member.Username + "#" + ctx.Member.Discriminator != botInstance.AdminUserName)
+                // Return false if user is neither owner of the appliaction, server manager, flagged as an admin user nor has a role flagged as an admin role
+                if (!ctx.Client.CurrentApplication.Owners.Contains(ctx.User) &&
+                    !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) &&
+                    !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username + "#" + ctx.Member.Discriminator) &&
+                    !CheckIfAdminRole(ctx.Member, botInstance.BotConfig.AdminRoles))
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today")).AsEphemeral(true));
@@ -161,6 +164,22 @@ namespace TEASLibrary
 
             // If no checks have failed, return true
             return true;
+        }
+
+        /// <summary>
+        /// Checks whether a DiscordMember has any of the roles defined as admin roles
+        /// </summary>
+        /// <param name="ctxMember">The DiscordMember whose roles to check</param>
+        /// <param name="adminRoles">A list of role names to check against</param>
+        /// <returns>True if the member has any of the roles, false if not</returns>
+        private static bool CheckIfAdminRole(DiscordMember ctxMember, List<String> adminRoles)
+        {
+            foreach (DiscordRole role in ctxMember.Roles)
+            {
+                if (adminRoles.Contains(role.Name))
+                    return true;
+            }
+            return false;
         }
 
         /// <summary>
