@@ -47,7 +47,7 @@ namespace TEASConsole
             public bool Verbose { get; set; }
         }
 
-        static void Main(string[] args)
+        static int Main(string[] args)
         {
             // Initialise Serilog
             var logLevelSwitch = new LoggingLevelSwitch();
@@ -87,7 +87,7 @@ namespace TEASConsole
                 verbose = o.Verbose;
             });
             if (parseResult.Tag == ParserResultType.NotParsed)
-                return;
+                return 0;
 
             if (verbose)
             {
@@ -117,8 +117,18 @@ namespace TEASConsole
             if (newConfig)
             {
                 // User wants to create a new config from scratch, ignore existing configuration and launch configuration assistant
-                /// TODO: Implement configuration assistant, for now quit programme
-                return;
+                config = Helpers.RunInteractiveConfig(configFile, guildID, botToken, audioDeviceName, channelID, adminUsers, adminRoles);
+                if (config == null)
+                {
+                    Log.Fatal("Configuration assistant returned an invalid configuration. Please retry using valid parameters.");
+                    return -1;
+                }
+                else
+                {
+                    Log.Information("A new TEAS configuration was created and will be used for this session! Remember to pass " +
+                        "the file name/path to TEASConsole next time you want to use it if you have saved it in a place other" +
+                        "than \"botconfig.txt\".");
+                }
             }
             else
             {
@@ -172,14 +182,14 @@ namespace TEASConsole
                         {
                             Log.Fatal($"Error encountered while validating config overrides: {ex.Message} " +
                                 $"Check CLI arguments.");
-                            return;
+                            return -1;
                         }
                     }
                     catch (Exception ex)
                     {
                         Log.Fatal($"Error ecountered while trying to parse existing configuration file: {ex.Message} " +
                             $"Try to fix the configuration or run '--new' to create a new one.");
-                        return;
+                        return -1;
                     }
                 }
                 else
@@ -197,12 +207,12 @@ namespace TEASConsole
                         {
                             Log.Fatal($"Given required configuration options are invalid: {ex.Message} " +
                                 $"Check CLI arguments.");
-                            return;
+                            return -1;
                         }
                         catch (Exception ex)
                         {
                             Log.Fatal($"An error occured when trying to save the new configuration: {ex.Message}");
-                            return;
+                            return -1;
                         }
                     }
                     else
@@ -211,18 +221,29 @@ namespace TEASConsole
                         if (File.Exists("bottoken.txt"))
                         {
                             // An older bottoken file was found, probably the user has updated from an old TEASConsole version
-                            Log.Warning("Config file not found, but found an old bottoken.txt file. " +
+                            Log.Warning("Config file not found, but an old bottoken.txt file exists. " +
                                 "Have you recently updated from an earlier TEASConsole version? " +
                                 "Check https://github.com/dandln/TheEpicAudioStreamer#migrating-from-earlier-versions for more information. " +
                                 "Launching configuration assistant...");
+                            botToken = File.ReadAllLines("bottoken.txt")[0];
                         }
                         else
                         {
                             Log.Warning("Config file was not found, and required options were not set via command line. Launching configuration assistant...");
                         }
 
-                        /// TODO: Implement configuration assistant, for now quit programme
-                        return;
+                        config = Helpers.RunInteractiveConfig(configFile, guildID, botToken, audioDeviceName, channelID, adminUsers, adminRoles);
+                        if (config == null)
+                        {
+                            Log.Fatal("Configuration assistant returned an invalid configuration. Please retry using valid parameters.");
+                            return -1;
+                        }
+                        else
+                        {
+                            Log.Information("A new TEAS configuration was created and will be used for this session! Remember to pass " +
+                                "the file name/path to TEASConsole next time you want to use it if you have saved it in a place other " +
+                                "than \"botconfig.txt\".");
+                        }
                     }
                 }
             }
@@ -251,6 +272,7 @@ namespace TEASConsole
             /// - Connect directly to a specific Guild
             /// ...
 
+            return 0;
         }
     }
 }

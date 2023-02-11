@@ -130,7 +130,7 @@
                 string.Join('=', "BotToken", BotToken),
                 string.Join('=', "DefaultDevice", DefaultDeviceFriendlyName),
                 string.Join('=', "DefaultChannel", DefaultChannelID),
-                string.Join('=', "AminUsers", string.Join(',', AdminUsers.ToArray())),
+                string.Join('=', "AdminUsers", string.Join(',', AdminUsers.ToArray())),
                 string.Join('=', "AdminRoles", string.Join(',', AdminRoles.ToArray()))
             };
             File.WriteAllLines(configFilePath, options);
