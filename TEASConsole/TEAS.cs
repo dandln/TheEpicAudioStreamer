@@ -259,18 +259,17 @@ namespace TEASConsole
             }
             Log.Information("Chosen audio device is {0}", AudioDevice.DeviceFriendlyName);
 
+            if (!string.IsNullOrWhiteSpace(config.DefaultChannelID))
+                Log.Debug("The bot will automatically connect to the channel with the ID {0}", config.DefaultChannelID);
             if (config.AdminUsers.Count != 0)
-                Log.Information("The bot will accept commands from users {0}", config.AdminUsers.ToString());
+                Log.Information("The bot will accept commands from users {0}", string.Join(',', config.AdminUsers.ToArray()));
+            if (config.AdminRoles.Count != 0)
+                Log.Information("The bot will accept commands from users with roles {0}", string.Join(',', config.AdminUsers.ToArray()));
 
             // When all options and configurations are parsed, create a new bot object and run it.
             var logFactory = new LoggerFactory().AddSerilog();
-            Bot bot = new(config.BotToken, logFactory, "", AudioDevice, verbose);
+            Bot bot = new(config, logFactory, AudioDevice, verbose);
             bot.Connect().GetAwaiter().GetResult();
-
-            /// TODO: Create compatibility, between TEASLibrary and the new configuration formats
-            /// - Make use of admin users and admin roles (admin user left blank above)
-            /// - Connect directly to a specific Guild
-            /// ...
 
             return 0;
         }

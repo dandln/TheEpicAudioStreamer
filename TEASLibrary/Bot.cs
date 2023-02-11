@@ -6,6 +6,8 @@ using DSharpPlus.Entities;
 using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using System.Threading.Channels;
+using System.Linq;
 
 namespace TEASLibrary
 {
@@ -30,50 +32,58 @@ namespace TEASLibrary
         public WasapiLoopbackCapture? Capture { get; private set; }
 
         /// <summary>
-        /// The Discord username of an eligible user that is allowed to control the bot
+        /// The bot configuration in use by the instance
         /// </summary>
-        public string AdminUserName { get; private set; }
+        public ConfigManager BotConfig { get; private set; }
+
+        /// <summary>
+        /// The active Guild that the user has defined for the bot
+        /// </summary>
+        protected DiscordGuild Guild { get; private set; }
+
+        /// <summary>
+        /// The default voice channel that the user has defined for the bot
+        /// </summary>
+        protected DiscordChannel? DefaultChannel { get; private set; }
 
         private EventHandler<WaveInEventArgs>? AudioHandler;
-        private EventHandler<StoppedEventArgs>? StoppedHandler;
 
         /// <summary>
         /// Constructs a new Bot object with the given parameters
         /// </summary>
-        /// <param name="botToken">The Discord bot token to be used with the bot</param>
+        /// <param name="botConfig">The TEAS configuration object to be used by the bot</param>
         /// <param name="logFactory">An optional LoggerFactory object that will be passed to DSharpPlus to handle logging of events</param>
-        /// <param name="adminUserName">An optional Discord name of a user that the bot should accept commands from in addition to server managers</param>
         /// <param name="audioDevice">An optionally pre-defined audio device to be used for streaming</param>
         /// <param name="verbose">Define whether debug log messages should be displayed. Defaults to false</param>
-        public Bot(string botToken, ILoggerFactory? logFactory = null, string adminUserName = "", MMDevice? audioDevice = null, bool verbose = false)
+        public Bot(ConfigManager botConfig, ILoggerFactory? logFactory = null, MMDevice? audioDevice = null, bool verbose = false)
         {
+            BotConfig = botConfig;
             ChangeAudioDevice(audioDevice);
-            AdminUserName = adminUserName;
 
             // Create Discord configuration
-            DiscordConfiguration botConfig = new()
+            DiscordConfiguration discordConfig = new()
             {
-                Token = botToken,
+                Token = BotConfig.BotToken,
                 TokenType = TokenType.Bot
             };
 
             // Set log factory if parameter is not null
             if (logFactory != null)
-                botConfig.LoggerFactory = logFactory;
+                discordConfig.LoggerFactory = logFactory;
 
             // Set debug log level if verbose is set
             if (verbose == true)
-                botConfig.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug;
+                discordConfig.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug;
 
             // Create client object
-            Discord = new DiscordClient(botConfig);
+            Discord = new DiscordClient(discordConfig);
 
             // Register Slash Commands
             var slashCmds = Discord.UseSlashCommands(new SlashCommandsConfiguration
             {
                 Services = new ServiceCollection().AddSingleton<Bot>(this).BuildServiceProvider()
             });
-            slashCmds.RegisterCommands<SlashCommands>();
+            slashCmds.RegisterCommands<SlashCommands>(ulong.Parse(BotConfig.GuildID));
 
             // Register event handlers for logging command activity
             slashCmds.SlashCommandInvoked += async (s, e) =>
@@ -87,6 +97,39 @@ namespace TEASLibrary
             slashCmds.SlashCommandErrored += async (s, e) =>
             {
                 Discord.Logger.LogError("{CommandName} threw the following exception: {ExceptionType} - {ExceptionMessage}", e.Context.CommandName, e.Exception.GetType(), e.Exception.Message);
+            };
+
+            // Register event handler to GuildDownloadCompleted to run validation of passed guild and channel IDs and potentially connect to a voice channel
+            Discord.GuildDownloadCompleted += async (s, e) =>
+            {
+                // Validate and save Guild that the user has defined for the bot
+                try
+                {
+                    Guild = Discord.Guilds[ulong.Parse(BotConfig.GuildID)];
+                }
+                catch (KeyNotFoundException)
+                {
+                    Discord.Logger.LogCritical("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
+                    throw new KeyNotFoundException("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
+                }
+
+                // Validate and save default Channel if the user has defined one
+                if (!string.IsNullOrWhiteSpace(BotConfig.DefaultChannelID))
+                {
+                    try
+                    {
+                        DefaultChannel = Guild.Channels[ulong.Parse(BotConfig.DefaultChannelID)];
+                    }
+                    catch (KeyNotFoundException)
+                    {
+                        Discord.Logger.LogWarning("Passed Channel ID is invalid! Check bot configuration and make sure the channel is in the defined guild. " +
+                            "Bot will not automatically connect.");
+                    }
+                }
+
+                // If default channel is set, connect on startup
+                if (DefaultChannel != null)
+                    AutoConnectToVoice();
             };
 
             // Indicate the use of VoiceNext
@@ -108,6 +151,28 @@ namespace TEASLibrary
         public async Task Disconnect()
         {
             await Discord.DisconnectAsync();
+        }
+
+        /// <summary>
+        /// Connects to the voice channel defined in the bot configuration and starts streaming if a device has been set
+        /// </summary>
+        private async void AutoConnectToVoice()
+        {
+            var vnext = Discord.GetVoiceNext();
+            var connection = await vnext.ConnectAsync(DefaultChannel);
+            var stream = connection.GetTransmitSink();
+
+            // If audio device and capture instance are set, begin streaming
+            if (Capture != null && AudioDevice != null)
+            {
+                // Initialise event handler for audio captured
+                AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => SlashCommands.AudioDataAvilableEventHander(s, e, stream, Capture));
+                Capture.DataAvailable += AudioHandler;
+                Capture.StartRecording();
+                Discord.Logger.LogInformation("Bot connected to default channel {0} and started streaming", DefaultChannel.Name);
+            }
+            else
+                Discord.Logger.LogInformation("Bot connected to default channel {0}", DefaultChannel.Name);
         }
 
         /// <summary>
@@ -137,7 +202,7 @@ namespace TEASLibrary
                 Capture.StartRecording();
         }
 
-        private class SlashCommands : ApplicationCommandModule
+        internal class SlashCommands : ApplicationCommandModule
         {
 
             /// <summary>
@@ -164,12 +229,9 @@ namespace TEASLibrary
 
                 if (BotInstance.Capture != null && BotInstance.AudioDevice != null)
                 {
-                    // Initialise new event handlers and subscribe to events for available audio from capture device and recording completion
-                    // Note: This is a little messy, but creates the ability to unsubscribe from the events to prevent a memory leak
+                    // Initialise event handler for audio captured
                     BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
                     BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
-                    BotInstance.StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => AudioRecordingStoppedEventHandler(s, e, ctx));
-                    BotInstance.Capture.RecordingStopped += BotInstance.StoppedHandler;
                 }
 
                 if (channel.Parent != null)
@@ -210,12 +272,9 @@ namespace TEASLibrary
                 // Open transmit stream
                 var stream = connection.GetTransmitSink();
 
-                // Initialise new event handlers and subscribe to events for available audio from capture device and recording completion
-                // Note: This is a little messy, but creates the ability to unsubscribe from the events to prevent a memory leak
+                // Initialise event handler for audio captured
                 BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
                 BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
-                BotInstance.StoppedHandler = new EventHandler<StoppedEventArgs>((s, e) => AudioRecordingStoppedEventHandler(s, e, ctx));
-                BotInstance.Capture.RecordingStopped += BotInstance.StoppedHandler;
 
                 // Start capturing
                 BotInstance.Capture.StartRecording();
@@ -253,11 +312,9 @@ namespace TEASLibrary
                 }
                 if (BotInstance.Capture != null)
                 {
-                    // Unsubscribe from events to prevent memory leak
+                    // Unsubscribe from event
                     BotInstance.Capture.DataAvailable -= BotInstance.AudioHandler;
-                    BotInstance.Capture.RecordingStopped -= BotInstance.StoppedHandler;
                     BotInstance.AudioHandler = null;
-                    BotInstance.StoppedHandler = null;
                 }
                 
                 // Disconnect
@@ -271,24 +328,13 @@ namespace TEASLibrary
             /// </summary>
             /// <param name="sink">The Discord VoiceTransmitSink instance</param>
             /// <param name="device">The WasapiLoopbackCapture device</param>
-            private static async void AudioDataAvilableEventHander(object s, WaveInEventArgs e, VoiceTransmitSink sink, WasapiLoopbackCapture device)
+            internal static async void AudioDataAvilableEventHander(object s, WaveInEventArgs e, VoiceTransmitSink sink, WasapiLoopbackCapture device)
             {
                 // If audio data is available, convert it into PCM16 format and write it into the stream.
                 if (e.Buffer.Length > 0)
                 {
                     await sink.WriteAsync(Utils.AudioToPCM16(e.Buffer, e.BytesRecorded, device.WaveFormat));
                 }
-            }
-
-            /// <summary>
-            /// An event handler that prints potential error messages from the audio capture process to a Discord text channel
-            /// </summary>
-            /// <param name="ctx">The InteractionContext</param>
-            private static async void AudioRecordingStoppedEventHandler(object s, StoppedEventArgs e, InteractionContext ctx)
-            {
-                if (e.Exception != null)
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, $"An error occured while capturing audio: '{e.Exception.Message}'")));
             }
         }
     }
