@@ -7,7 +7,6 @@ using Serilog;
 using Serilog.Core;
 using TEASLibrary;
 using System.Linq;
-using System.Linq.Expressions;
 
 namespace TEASConsole
 {
@@ -169,7 +168,7 @@ namespace TEASConsole
                         {
                             config.Validate();
                         }
-                        catch (ConfigManager.Exceptions.ConfigValidationFailedException ex)
+                        catch (ConfigManager.ConfigValidationFailedException ex)
                         {
                             Log.Fatal($"Error encountered while validating config overrides: {ex.Message} " +
                                 $"Check CLI arguments.");
@@ -194,7 +193,7 @@ namespace TEASConsole
                             config = new ConfigManager(guildID, botToken, audioDeviceName, channelID, adminUsers, adminRoles);
                             config.Write(configFile);
                         }
-                        catch (ConfigManager.Exceptions.ConfigValidationFailedException ex)
+                        catch (ConfigManager.ConfigValidationFailedException ex)
                         {
                             Log.Fatal($"Given required configuration options are invalid: {ex.Message} " +
                                 $"Check CLI arguments.");

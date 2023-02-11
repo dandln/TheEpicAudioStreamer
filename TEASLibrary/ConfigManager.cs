@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TEASConsole
+﻿namespace TEASLibrary
 {
     /// <summary>
-    /// Class for handling TEASConsole bot configuration files
+    /// Class for handling TEAS bot configuration files
     /// </summary>
-    internal class ConfigManager
+    public class ConfigManager
     {
         /// <summary>
         /// The ID of the Discord Guild that the bot should make itself available in
@@ -49,6 +41,12 @@ namespace TEASConsole
         /// <param name="configFilePath">The path to an existing configuration file</param>
         public ConfigManager(string configFilePath)
         {
+            GuildID = "";
+            BotToken = "";
+            DefaultDeviceFriendlyName = "";
+            DefaultChannelID = "";
+            AdminUsers = new List<string>();
+            AdminRoles = new List<string>();
             Parse(configFilePath);
         }
 
@@ -144,38 +142,38 @@ namespace TEASConsole
         /// Performs basic validation on the config object, to check whether required fields are set and valid data types.
         /// Does not check whether Guild/Channel IDs or the bot token is actually available/accessible in Discord.
         /// </summary>
-        /// <exception cref="Exceptions.ConfigValidationFailedException">Exception thrown if validation fails</exception>
+        /// <exception cref="ConfigValidationFailedException">Exception thrown if validation fails</exception>
         public void Validate()
         {
             // Validate Guild ID
             if (string.IsNullOrWhiteSpace(GuildID))
-                throw new Exceptions.ConfigValidationFailedException("The Guild ID is empty.");
+                throw new ConfigValidationFailedException("The Guild ID is empty.");
             else
             {
                 try { Int64.Parse(GuildID); }
-                catch (Exception) { throw new Exceptions.ConfigValidationFailedException("The Guild ID is invalid."); }
+                catch (Exception) { throw new ConfigValidationFailedException("The Guild ID is invalid."); }
             }
 
             // Validate Bot Token
             if (string.IsNullOrWhiteSpace(BotToken))
-                throw new Exceptions.ConfigValidationFailedException("The bot token is empty.");
+                throw new ConfigValidationFailedException("The bot token is empty.");
             else
             {
                 if (BotToken.Length != 59 || !BotToken.Contains('.'))
-                    throw new Exceptions.ConfigValidationFailedException("The bot token is invalid.");
+                    throw new ConfigValidationFailedException("The bot token is invalid.");
             }
 
             // Validate channel ID if set
             if (!string.IsNullOrWhiteSpace(DefaultChannelID))
             {
                 try { Int64.Parse(DefaultChannelID); }
-                catch (Exception) { throw new Exceptions.ConfigValidationFailedException("The default channel ID is invalid."); }
+                catch (Exception) { throw new ConfigValidationFailedException("The default channel ID is invalid."); }
             }
         }
 
-        public class Exceptions
-        {
-            public class ConfigValidationFailedException : Exception { public ConfigValidationFailedException(string message) : base(message) { } }
-        }
+        /// <summary>
+        /// Exception for errors in validating a configuration object
+        /// </summary>
+        public class ConfigValidationFailedException : Exception { public ConfigValidationFailedException(string message) : base(message) { } }
     }
 }
