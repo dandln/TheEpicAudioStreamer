@@ -51,7 +51,7 @@
         }
 
         /// <summary>
-        /// Initialises a new configuration
+        /// Initialises a new configuration based on given arguments. Does not validate after object creation.
         /// </summary>
         /// <param name="guildID">The ID of the Discord Guild that the bot should make itself available in</param>
         /// <param name="botToken">The Bot Token of the Discord application that the bot should connect to</param>
@@ -72,8 +72,6 @@
             DefaultChannelID = defaultChannelID;
             AdminUsers = adminUsers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
             AdminRoles = adminRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-
-            Validate();
         }
 
         /// <summary>
