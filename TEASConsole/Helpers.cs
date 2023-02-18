@@ -75,12 +75,12 @@ namespace TEASConsole
 
                 if (audioDevice != null)
                 {
-                    Log.Information("The device \"{0}\" is being used in this session as per command line argument", audioDevice.DeviceFriendlyName);
+                    Log.Information("The device \"{0}\" will be used in this session", audioDevice.DeviceFriendlyName);
                     return audioDevice;
                 }
 
                 // A device name was given, but it is invalid
-                Log.Warning("\"{0}\" was given as a device name via command line argument, but it either does not exist or is unavailable", deviceName);
+                Log.Warning("\"{0}\" was pre-defined as an audio device, but it either does not exist or is unavailable", deviceName);
             }
 
             // Prompt user to select a readable device ID
@@ -160,8 +160,6 @@ namespace TEASConsole
             Console.WriteLine(
                 "------------------------------------------------------------\n" +
                 "Welcome to the interactive TEAS configuration file creator!\n" +
-                "This interactive session is going to guide you through the\n" +
-                "creation of a new TEAS config file.\n" +
                 "If an existing file was parsed or options given through CLI\n" +
                 "arguments, defaults will be set accordingly.\n" +
                 "------------------------------------------------------------"
@@ -171,8 +169,8 @@ namespace TEASConsole
             Console.WriteLine(
                 "STEP 1: DISCORD GUILD ID\n" +
                 "TEASConsole will make itself available to a specific Guild\n" +
-                "(i.e. a Discord Server). Right click on the server you want to\n" +
-                "use TEAS in (make sure developer mode is enabled), then paste\n" +
+                "(i.e. a Discord Server). Right click on the desired server\n" +
+                "in Discord (make sure developer mode is enabled), then paste\n" +
                 "the ID below."
                 );
             if (!string.IsNullOrWhiteSpace(createdConfig.GuildID))
@@ -186,8 +184,8 @@ namespace TEASConsole
             // GET BOT TOKEN
             Console.WriteLine(
                 "STEP 2: DISCORD BOT TOKEN\n" +
-                "TEASConsole needs a Discord application bot token to connect to.\n" +
-                "Copy it from the developer portal and paste it below.\n" +
+                "TEASConsole needs to connect to a Discord application.\n" +
+                "Copy the bot token from the developer portal and paste it below.\n" +
                 "See the TEASConsole Readme for more information on how to get this."
                 );
             if (File.Exists("bottoken.txt"))
@@ -225,7 +223,7 @@ namespace TEASConsole
             if (int.TryParse(usrInptAudioDevice, out int n))
             {
                 try { createdConfig.DefaultDeviceFriendlyName = tempDevicesList[n].DeviceFriendlyName; }
-                catch (ArgumentOutOfRangeException) { Console.WriteLine("Device ID out of range. Leaving input blank..."); }
+                catch (ArgumentOutOfRangeException) { Console.WriteLine("Device ID out of range. Continuing without default device..."); }
             }
             else if (!string.IsNullOrWhiteSpace(usrInptAudioDevice))
                 createdConfig.DefaultDeviceFriendlyName = usrInptAudioDevice;
@@ -234,7 +232,7 @@ namespace TEASConsole
             // GET CHANNEL ID
             Console.WriteLine(
                 "STEP 4: DEFAULT CHANNEL ID (optional)\n" +
-                "You can define the ID of a discord voice channel that the bot\n" +
+                "You can define a Discord voice channel that the bot\n" +
                 "should automatically connect to on startup. Right click on the\n" +
                 "channel (make sure dev mode is enabled) and paste the ID below."
                 );
@@ -247,7 +245,7 @@ namespace TEASConsole
             if (!string.IsNullOrWhiteSpace(usrInptChannel))
             {
                 try { Int64.Parse(usrInptChannel); createdConfig.DefaultChannelID = usrInptChannel; }
-                catch (Exception) { Console.WriteLine("Channel ID is invalid. Leaving input blank..."); }
+                catch (Exception) { Console.WriteLine("Channel ID is invalid. Continuing without default channel..."); }
             }
             Console.WriteLine("------------------------------------------------------------");
 
@@ -311,7 +309,7 @@ namespace TEASConsole
             catch (Exception ex)
             {
                 Console.WriteLine("An error occured while saving the config file: " + ex.Message + "\n" +
-                    "The generated config can used for this session, but will not be saved.\n" +
+                    "The generated configuration will be used for this session, but not saved.\n" +
                     "Returning to TEASConsole...");
                 Console.WriteLine();
             }
