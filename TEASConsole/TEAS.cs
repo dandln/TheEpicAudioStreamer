@@ -22,7 +22,7 @@ namespace TEASConsole
                 "If a valid config file is found, other CLI arguments will override values found in the file, but are not saved.")]
             public string ConfigFilePath { get; set; }
 
-            [Option('g', "guild", Required = false, HelpText = "The ID of a Discord guild the bot makes itself available to.")]
+            [Option('g', "guild", Required = false, HelpText = "The ID of a Discord Guild the bot makes itself available to.")]
             public string GuildID { get; set; }
 
             [Option('t', "token", Required = false, HelpText = "The bot token of the Discord application TEAS will connect to.")]
@@ -40,7 +40,7 @@ namespace TEASConsole
             [Option("admin-roles", Default = "", HelpText = "A comma-separated list of server role names that the bot will accept commands from.")]
             public string AdminRoles { get; set; }
 
-            [Option("new", Required = false, HelpText = "Ignores any existing config file and creates a new one in an interactive session.")]
+            [Option("new", Required = false, HelpText = "Launches the configuration assistant regardless of whether a valid config file was found at the given location.")]
             public bool NewConfig { get; set; }
 
             [Option("verbose", Required = false, HelpText = "Enables debug messages.")]
@@ -223,7 +223,7 @@ namespace TEASConsole
                             // An older bottoken file was found, probably the user has updated from an old TEASConsole version
                             Log.Warning("Config file not found, but an old bottoken.txt file exists. " +
                                 "Have you recently updated from an earlier TEASConsole version? " +
-                                "Check https://github.com/dandln/TheEpicAudioStreamer#migrating-from-earlier-versions for more information. " +
+                                "Check https://github.com/dandln/TheEpicAudioStreamer#user-content-migrating-from-v052-or-earlier for more information. " +
                                 "Launching configuration assistant...");
                             botToken = File.ReadAllLines("bottoken.txt")[0];
                         }
