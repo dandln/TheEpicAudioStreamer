@@ -78,7 +78,7 @@ namespace TEASLibrary
             // Create client object
             Discord = new DiscordClient(discordConfig);
 
-            // Register Slash Commands
+            // Register guild-specific Slash Commands
             var slashCmds = Discord.UseSlashCommands(new SlashCommandsConfiguration
             {
                 Services = new ServiceCollection().AddSingleton<Bot>(this).BuildServiceProvider()
@@ -142,6 +142,11 @@ namespace TEASLibrary
         public async Task Connect()
         {
             await Discord.ConnectAsync();
+
+            // Make sure old global Slash Commands are cleared. This is to ensure commands don't appear twice when migrating from an old TEAS version.
+            List<DiscordApplicationCommand> emptyCommands = new();
+            await Discord.BulkOverwriteGlobalApplicationCommandsAsync(emptyCommands);
+
             await Task.Delay(-1);
         }
 
