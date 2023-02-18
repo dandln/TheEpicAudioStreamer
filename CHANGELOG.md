@@ -1,7 +1,22 @@
 # Changelog
+### v0.6.0 - 2023-02-18
+* Implemented new configuration format, allowing more customisation and automatisation features
+    * Bot now requires a Guild ID to connect to and register Slash Commands in
+    * Added option to automatically connect to a given voice channel on startup
+    * Added option to define multiple admin users and/or roles that can issue Slash Commands to the bot
+    * Implemented interactive assistant to create configuration files
+* Bot now always listenes to commands issued by the owner of the application
+* Slash Commands are now registered on a Guild-basis instead of globally
+* Internal code changes and cleanups
+* Updated dependencies
+
+DSharpPlus version | NAudio version | Command Line Parser version | Serilog version
+------------------ | -------------- | --------------------------- | ---------------
+ 4.3.0 | 2.1.0 | 2.9.1 | 2.12.0
+
 ### v0.5.2 - 2022-04-03
 * Implemented Serilog to facilitate more streamlined logging of both bot and app events.
-* Updated dependencies (fixes and OAuth error in D#+).
+* Updated dependencies (fixes an OAuth error in D#+).
 
 DSharpPlus version | NAudio version | Command Line Parser version | Serilog version
 ------------------ | -------------- | --------------------------- | ---------------
