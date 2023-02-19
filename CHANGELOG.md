@@ -1,4 +1,11 @@
 # Changelog
+### v0.6.1 - 2023-02-19
+* HOTFIX: Removed bot token validation in config manager, as it failed to validate tokens created after a recent change in token format by Discord
+
+DSharpPlus version | NAudio version | Command Line Parser version | Serilog version
+------------------ | -------------- | --------------------------- | ---------------
+ 4.3.0 | 2.1.0 | 2.9.1 | 2.12.0
+
 ### v0.6.0 - 2023-02-18
 * Implemented new configuration format, allowing more customisation and automatisation features
     * Bot now requires a Guild ID to connect to and register Slash Commands in
