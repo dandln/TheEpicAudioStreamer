@@ -155,11 +155,6 @@
             // Validate Bot Token
             if (string.IsNullOrWhiteSpace(BotToken))
                 throw new ConfigValidationFailedException("The bot token is empty.");
-            else
-            {
-                if (BotToken.Length != 59 || !BotToken.Contains('.'))
-                    throw new ConfigValidationFailedException("The bot token is invalid.");
-            }
 
             // Validate channel ID if set
             if (!string.IsNullOrWhiteSpace(DefaultChannelID))

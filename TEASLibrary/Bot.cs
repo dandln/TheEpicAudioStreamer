@@ -141,7 +141,8 @@ namespace TEASLibrary
         /// </summary>
         public async Task Connect()
         {
-            await Discord.ConnectAsync();
+            try { await Discord.ConnectAsync(); }
+            catch (Exception ex) { Discord.Logger.LogCritical("Could not connect to bot. " + ex.Message); return; }
 
             // Make sure old global Slash Commands are cleared. This is to ensure commands don't appear twice when migrating from an old TEAS version.
             List<DiscordApplicationCommand> emptyCommands = new();
