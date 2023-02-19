@@ -6,7 +6,7 @@
 	<IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <Authors>Dan Sonntag</Authors>
     <Company></Company>
-    <Version>0.6.0</Version>
+    <Version>0.6.1</Version>
     <UserSecretsId>51dbde35-f7c4-48c0-bf2f-bc6a2dda543a</UserSecretsId>
     <RootNamespace></RootNamespace>
   </PropertyGroup>
