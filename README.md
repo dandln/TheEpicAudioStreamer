@@ -75,6 +75,6 @@ The following misc arguments are supported:
 ## Migrating from v0.5.2 or earlier
 Version 0.6 of TEASConsole introduced a new format for configuration files and changed the way that it registers Slash Commands on the Discord server. Because of that, a Discord Guild ID is now needed to run the bot. See ["Retrieving the Guild ID"](#user-content-retrieving-the-guild-id) for how to get this.
 
-Upon running v0.6 or higher for the first time, an interactive assistant will guide you through the creation of a new configuration file. Your bot token from an existing `bottoken.txt` file will be used automatically. See ["Running TEAS"](#user-content-running-teas) for more information on new features introduced by the configuration format.
+Upon running v0.6 or higher for the first time, an interactive assistant will guide you through the creation of a new configuration file. Your bot token from an existing `bottoken.txt` file will be used automatically. Note that passing a bot token file via the `-t` argument is no longer supported. See ["Running TEAS"](#user-content-running-teas) for more information on new features introduced by the configuration format, and ["Command Line Usage"](#user-content-command-line-usage) for more information on the changes to CLI usage.
 
-You will also notice that each Slash Commands appears twice in your server, but only one of them will function. This should be resolved by simply restarting your Discord, as TEAS will automatically clear the old commands upon first startup.
+You will likely also notice that each Slash Commands appears twice in your server, but only one of them will function. This should be resolved by simply restarting your Discord client, as TEAS will automatically clear the old commands upon first startup. 
