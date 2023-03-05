@@ -1,4 +1,11 @@
 # Changelog
+### v0.6.2 - 2023-03-05
+* Updated dependencies to address breaking Discord API change coming into effect on 15/03/2023
+
+DSharpPlus version | NAudio version | Command Line Parser version | Serilog version
+------------------ | -------------- | --------------------------- | ---------------
+ 4.4.0-nightly-01376 | 2.1.0 | 2.9.1 | 2.12.0
+
 ### v0.6.1 - 2023-02-19
 * HOTFIX: Removed bot token validation in config manager, as it failed to validate tokens created after a recent change in token format by Discord
 
@@ -12,8 +19,10 @@ DSharpPlus version | NAudio version | Command Line Parser version | Serilog vers
     * Added option to automatically connect to a given voice channel on startup
     * Added option to define multiple admin users and/or roles that can issue Slash Commands to the bot
     * Implemented interactive assistant to create configuration files
-* Bot now always listenes to commands issued by the owner of the application
+* Bot now always listens to commands issued by the owner of the application
 * Slash Commands are now registered on a Guild-basis instead of globally
+* `-t` CLI argument now only accepts a full token, not a file path
+* Other changes to CLI arguments (see Readme)
 * Internal code changes and cleanups
 * Updated dependencies
 
