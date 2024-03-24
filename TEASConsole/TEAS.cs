@@ -61,7 +61,7 @@ namespace TEASConsole
             Console.WriteLine();
 
             // Check for updates
-            if (Helpers.CheckUpdate(appVersion) == 0)
+            if (Helpers.CheckUpdate(appVersion) == 1)
             {
                 Console.BackgroundColor = ConsoleColor.Yellow;
                 Console.ForegroundColor = ConsoleColor.Black;
