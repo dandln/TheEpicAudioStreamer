@@ -57,9 +57,10 @@ namespace TEASConsole
         }
 
         /// <summary>
-        /// Prompts the user to select an audio playback device in the command console
+        /// Prompts the user to select an audio playback device in the command console, or prepare a
+        /// pre-selected one.
         /// </summary>
-        /// <param name="deviceName">Optional: The friendly device name already preselected by the user</param>
+        /// <param name="deviceName">Optional: The friendly device name pre-selected by the user</param>
         /// <returns>The audio device, or null if no valid device was selected</returns>
         public static MMDevice SelectDevice(string deviceName = "")
         {
@@ -74,13 +75,10 @@ namespace TEASConsole
                 audioDevice = devMgr.FindOutputDeviceByDeviceFriendlyName(deviceName);
 
                 if (audioDevice != null)
-                {
-                    Log.Information("The device \"{0}\" will be used in this session", audioDevice.DeviceFriendlyName);
                     return audioDevice;
-                }
 
                 // A device name was given, but it is invalid
-                Log.Warning("\"{0}\" was pre-defined as an audio device, but it either does not exist or is unavailable", deviceName);
+                Log.Warning("\"{0}\" was pre-defined as an audio device, but it either does not exist or is unavailable.", deviceName);
             }
 
             // Prompt user to select a readable device ID

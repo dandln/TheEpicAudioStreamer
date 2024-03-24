@@ -49,19 +49,34 @@ namespace TEASConsole
 
         static int Main(string[] args)
         {
+            Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
+
+            // Print greeting
+            Console.WriteLine(@"  _______________   _____ ______                       __   
+ /_  __/ ____/   | / ___// ____/___  ____  _________  / /__ 
+  / / / __/ / /| | \__ \/ /   / __ \/ __ \/ ___/ __ \/ / _ \
+ / / / /___/ ___ |___/ / /___/ /_/ / / / (__  ) /_/ / /  __/
+/_/ /_____/_/  |_/____/\____/\____/_/ /_/____/\____/_/\___/ 
+                                              Version " + appVersion.ToString(3));
+            Console.WriteLine();
+
+            // Check for updates
+            if (Helpers.CheckUpdate(appVersion) == 0)
+            {
+                Console.BackgroundColor = ConsoleColor.Yellow;
+                Console.ForegroundColor = ConsoleColor.Black;
+                Console.WriteLine("A new version of TEASConsole is available. Download here:\nhttps://github.com/dandln/TheEpicAudioStreamer/releases/\n");
+                Console.ResetColor();
+            }
+
             // Initialise Serilog
             var logLevelSwitch = new LoggingLevelSwitch();
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(logLevelSwitch)
                 .WriteTo.Console()
                 .CreateLogger();
+            Log.Debug("TEASConsole, version {0}", appVersion.ToString(3));
 
-            Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
-            Log.Information("Welcome to TEASConsole, version {0}", appVersion.ToString(3));
-
-            // Check for updates
-            if (Helpers.CheckUpdate(appVersion) == 1)
-                Log.Warning("A newer version of TEASConsole is available. Please download it from the Releases section on GitHub: https://github.com/dandln/TheEpicAudioStreamer/releases/");
 
             // BEGINN PARSING OF COMMAND LINE OPTIONS
             string configFile = "";
@@ -260,11 +275,11 @@ namespace TEASConsole
             Log.Information("Chosen audio device is {0}", AudioDevice.DeviceFriendlyName);
 
             if (!string.IsNullOrWhiteSpace(config.DefaultChannelID))
-                Log.Debug("The bot will automatically connect to the channel with the ID {0}", config.DefaultChannelID);
+                Log.Debug("Automatically connecting to channel ID {0}", config.DefaultChannelID);
             if (config.AdminUsers.Count != 0)
-                Log.Information("The bot will accept commands from users {0}", string.Join(',', config.AdminUsers.ToArray()));
+                Log.Information("Admin users: {0}", string.Join(',', config.AdminUsers.ToArray()));
             if (config.AdminRoles.Count != 0)
-                Log.Information("The bot will accept commands from users with roles {0}", string.Join(',', config.AdminUsers.ToArray()));
+                Log.Information("Admin roles: {0}", string.Join(',', config.AdminUsers.ToArray()));
 
             // When all options and configurations are parsed, create a new bot object and run it.
             var logFactory = new LoggerFactory().AddSerilog();
