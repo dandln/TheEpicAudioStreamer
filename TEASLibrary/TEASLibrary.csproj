@@ -4,16 +4,16 @@
     <TargetFramework>net6.0-windows</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.6.2</Version>
+    <Version>0.7.0</Version>
     <Authors>Dan Sonntag</Authors>
     <Company />
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="4.4.0-nightly-01376" />
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.0-nightly-01376" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.4.0-nightly-01376" />
-    <PackageReference Include="NAudio" Version="2.1.0" />
+    <PackageReference Include="DSharpPlus" Version="4.4.6" />
+    <PackageReference Include="DSharpPlus.SlashCommands" Version="4.4.6" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="4.4.6" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
 </Project>
