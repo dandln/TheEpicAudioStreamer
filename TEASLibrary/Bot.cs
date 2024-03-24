@@ -88,11 +88,11 @@ namespace TEASLibrary
             // Register event handlers for logging command activity
             slashCmds.SlashCommandInvoked += async (s, e) =>
             {
-                Discord.Logger.LogInformation("{CommandName} issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member.Username, e.Context.Member.Discriminator);
+                Discord.Logger.LogInformation("{CommandName} issued by {User}", e.Context.CommandName, e.Context.Member.Username);
             };
             slashCmds.SlashCommandExecuted += async (s, e) =>
             {
-                Discord.Logger.LogDebug("Successfully executed {CommandName}, issued by {User}#{Discriminator}", e.Context.CommandName, e.Context.Member.Username, e.Context.Member.Discriminator);
+                Discord.Logger.LogDebug("Successfully executed {CommandName}, issued by {User}", e.Context.CommandName, e.Context.Member.Username);
             };
             slashCmds.SlashCommandErrored += async (s, e) =>
             {

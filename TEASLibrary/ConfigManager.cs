@@ -57,7 +57,7 @@
         /// <param name="botToken">The Bot Token of the Discord application that the bot should connect to</param>
         /// <param name="defaultDeviceFriendlyName">An audio device ID that should automatically be used on startup</param>
         /// <param name="defaultChannelID">A Discord channel ID that the bot should automatically connect to on startup</param>
-        /// <param name="adminUsers">A comma-separated string of admin users in the form 'Username#Discriminator' that the bot should accept commands from</param>
+        /// <param name="adminUsers">A comma-separated string of usernames that the bot should accept commands from</param>
         /// <param name="adminRoles">A comma-separated string of server roles that the bot should accept commands from</param>
         public ConfigManager(string guildID = "",
                             string botToken = "",

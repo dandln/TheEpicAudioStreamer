@@ -85,12 +85,12 @@ namespace TEASLibrary
                 // Return false if user is neither owner of the appliaction, server manager, flagged as an admin user nor has a role flagged as an admin role
                 if (!ctx.Client.CurrentApplication.Owners.Contains(ctx.User) &&
                     !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) &&
-                    !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username + "#" + ctx.Member.Discriminator) &&
+                    !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username) &&
                     !CheckIfAdminRole(ctx.Member, botInstance.BotConfig.AdminRoles))
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Permission denied", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Permission denied", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -101,7 +101,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Bot not in a voice channel", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -112,7 +112,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Bot already in a voice channel", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -123,7 +123,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Member not in a voice channel", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Member not in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -134,7 +134,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - No active audio device", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -145,7 +145,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Bot not capturing", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
@@ -157,7 +157,7 @@ namespace TEASLibrary
                 {
                     ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already streaming")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User}#{Discriminator} - Bot already capturing", ctx.CommandName, ctx.Member.Username, ctx.Member.Discriminator);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.CommandName, ctx.Member.Username);
                     return false;
                 }
             }
