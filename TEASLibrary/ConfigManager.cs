@@ -36,6 +36,11 @@
         public List<string> AdminRoles { get; set; }
 
         /// <summary>
+        /// The activity that the bot will display  ("Playing...")
+        /// </summary>
+        public string BotActivity { get; set; }
+
+        /// <summary>
         /// Initialises a new configuration based on a configuration file
         /// </summary>
         /// <param name="configFilePath">The path to an existing configuration file</param>
@@ -47,6 +52,7 @@
             DefaultChannelID = "";
             AdminUsers = new List<string>();
             AdminRoles = new List<string>();
+            BotActivity = "";
             Parse(configFilePath);
         }
 
@@ -59,12 +65,14 @@
         /// <param name="defaultChannelID">A Discord channel ID that the bot should automatically connect to on startup</param>
         /// <param name="adminUsers">A comma-separated string of usernames that the bot should accept commands from</param>
         /// <param name="adminRoles">A comma-separated string of server roles that the bot should accept commands from</param>
+        /// <param name="botActivity">An activity that the bot will display ("Playing...")</param>
         public ConfigManager(string guildID = "",
                             string botToken = "",
                             string defaultDeviceFriendlyName = "",
                             string defaultChannelID = "",
                             string adminUsers = "",
-                            string adminRoles = "")
+                            string adminRoles = "",
+                            string botActivity = "")
         {
             GuildID = guildID;
             BotToken = botToken;
@@ -72,6 +80,7 @@
             DefaultChannelID = defaultChannelID;
             AdminUsers = adminUsers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
             AdminRoles = adminRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+            BotActivity = botActivity;
         }
 
         /// <summary>
@@ -112,6 +121,9 @@
                     case "AdminRoles":
                         AdminRoles = option[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
                         break;
+                    case "BotActivity":
+                        BotActivity = option[1];
+                        break;
                 }
             }
             Validate();
@@ -131,7 +143,8 @@
                 string.Join('=', "DefaultDevice", DefaultDeviceFriendlyName),
                 string.Join('=', "DefaultChannel", DefaultChannelID),
                 string.Join('=', "AdminUsers", string.Join(',', AdminUsers.ToArray())),
-                string.Join('=', "AdminRoles", string.Join(',', AdminRoles.ToArray()))
+                string.Join('=', "AdminRoles", string.Join(',', AdminRoles.ToArray())),
+                string.Join('=', "BotActivity", BotActivity)
             };
             File.WriteAllLines(configFilePath, options);
         }

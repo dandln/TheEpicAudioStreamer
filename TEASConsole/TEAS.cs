@@ -43,6 +43,9 @@ namespace TEASConsole
             [Option("admin-roles", Default = "", HelpText = "A comma-separated list of server role names that the bot will accept commands from.")]
             public string AdminRoles { get; set; }
 
+            [Option("activity", Default = "", HelpText = "An activity that the bot will display (\"Playing...\")")]
+            public string Activity { get; set; }
+
             [Option("new", Required = false, HelpText = "Launches the configuration assistant regardless of whether a valid config file was found at the given location.")]
             public bool NewConfig { get; set; }
 
@@ -90,6 +93,7 @@ namespace TEASConsole
             string channelID = "";
             string adminUsers = "";
             string adminRoles = "";
+            string botActivity = "";
             bool newConfig = false;
             bool verbose = false;
 
@@ -102,6 +106,7 @@ namespace TEASConsole
                 channelID = o.ChannelID;
                 adminUsers = o.AdminUserNames;
                 adminRoles = o.AdminRoles;
+                botActivity = o.Activity;
                 newConfig = o.NewConfig;
                 verbose = o.Verbose;
             });
@@ -127,6 +132,8 @@ namespace TEASConsole
                     parsedConfigs += $"AdminUsers({adminUsers}) ";
                 if (!string.IsNullOrWhiteSpace(adminRoles))
                     parsedConfigs += $"AdminRoles({adminRoles}) ";
+                if (!string.IsNullOrWhiteSpace(botActivity))
+                    parsedConfigs += $"BotActivity{botActivity}) ";
                 if (newConfig)
                     parsedConfigs += "NewConfig(true)";
                 Log.Debug(parsedConfigs);
@@ -197,6 +204,11 @@ namespace TEASConsole
                         {
                             Log.Information("Admin roles \"{0}\" are set in CLI arguments, overriding config file", adminRoles);
                             config.AdminRoles = adminRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+                        }
+                        if (!string.IsNullOrWhiteSpace(botActivity))
+                        {
+                            Log.Information("Bot activity {0} is set in CLI arguments, overriding config file", botActivity);
+                            config.BotActivity = botActivity;
                         }
 
                         // Run one last check to see whether config is valid with the overriden options
@@ -282,6 +294,8 @@ namespace TEASConsole
 
             if (!string.IsNullOrWhiteSpace(config.DefaultChannelID))
                 Log.Debug("Automatically connecting to channel ID {0}", config.DefaultChannelID);
+            if (!string.IsNullOrWhiteSpace(config.BotActivity))
+                Log.Debug("Activity will be set to \"Playing {0}\"", config.BotActivity);
             if (config.AdminUsers.Count != 0)
                 Log.Information("Admin users: {0}", string.Join(',', config.AdminUsers.ToArray()));
             if (config.AdminRoles.Count != 0)
@@ -290,7 +304,11 @@ namespace TEASConsole
             // When all options and configurations are parsed, create a new bot object and run it.
             var logFactory = new LoggerFactory().AddSerilog();
             Bot bot = new(config, logFactory, AudioDevice, verbose);
-            bot.Connect().GetAwaiter().GetResult();
+
+            if (!string.IsNullOrWhiteSpace(config.BotActivity))
+                bot.Connect(config.BotActivity).GetAwaiter().GetResult();
+            else
+                bot.Connect().GetAwaiter().GetResult();
 
             return 0;
         }

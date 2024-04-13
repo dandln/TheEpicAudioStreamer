@@ -263,6 +263,19 @@ namespace TEASConsole
                 createdConfig.AdminRoles = usrInptAdminRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
             AnsiConsole.WriteLine();
 
+            // GET ACTIVITY
+            AnsiConsole.Write(new Rule("Step 7: Activity (optional)").RuleStyle("lightgreen_1").LeftJustified());
+            AnsiConsole.WriteLine("You can set an activity that the bot will display as \"Playing <your input>\".");
+            if (string.IsNullOrWhiteSpace(createdConfig.DefaultChannelID))
+                AnsiConsole.MarkupLine("[dim]Leave blank to skip.[/]");
+            string usrInptActivity = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .AllowEmpty()
+                .DefaultValue(!string.IsNullOrEmpty(createdConfig.BotActivity) ? createdConfig.BotActivity : "")
+                .DefaultValueStyle("grey")
+                );
+            createdConfig.BotActivity = usrInptActivity;
+            AnsiConsole.WriteLine();
+
             // VALIDATE CONFIG
             AnsiConsole.Write(new Rule("That's all!").RuleStyle("turquoise2").LeftJustified());
             AnsiConsole.Write("Validating config... ");
