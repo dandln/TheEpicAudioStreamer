@@ -1,12 +1,11 @@
-﻿using System.Text.RegularExpressions;
-using DSharpPlus.SlashCommands;
+﻿using Microsoft.Extensions.Logging;
+using DSharpPlus;
 using DSharpPlus.Entities;
+using DSharpPlus.SlashCommands;
 using DSharpPlus.VoiceNext;
+using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
-using DSharpPlus;
-using Microsoft.Extensions.Logging;
-using NAudio.CoreAudioApi;
 
 namespace TEASLibrary
 {
