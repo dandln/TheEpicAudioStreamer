@@ -1,12 +1,15 @@
 ﻿using System;
 using System.IO;
-using CommandLine;
-using NAudio.CoreAudioApi;
+using System.Linq;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
+using CommandLine;
+using Spectre.Console;
 using Serilog;
 using Serilog.Core;
+using Serilog.Sinks.Spectre;
+using NAudio.CoreAudioApi;
 using TEASLibrary;
-using System.Linq;
 
 namespace TEASConsole
 {
@@ -52,28 +55,29 @@ namespace TEASConsole
             Version appVersion = System.Reflection.Assembly.GetEntryAssembly().GetName().Version;
 
             // Print greeting
-            Console.WriteLine(@"  _______________   _____ ______                       __   
- /_  __/ ____/   | / ___// ____/___  ____  _________  / /__ 
-  / / / __/ / /| | \__ \/ /   / __ \/ __ \/ ___/ __ \/ / _ \
- / / / /___/ ___ |___/ / /___/ /_/ / / / (__  ) /_/ / /  __/
-/_/ /_____/_/  |_/____/\____/\____/_/ /_/____/\____/_/\___/ 
-                                              Version " + appVersion.ToString(3));
-            Console.WriteLine();
+            AnsiConsole.Write(new FigletText(FigletFont.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream("Resources.smslant.flf")), "TEASConsole")
+                .Centered()
+                .Color(Color.Purple)
+                );
+            AnsiConsole.Write(new Text($"v{appVersion.ToString(3)}").Centered());
+            AnsiConsole.WriteLine("\n");
 
             // Check for updates
             if (Helpers.CheckUpdate(appVersion) == 1)
             {
-                Console.BackgroundColor = ConsoleColor.Yellow;
-                Console.ForegroundColor = ConsoleColor.Black;
-                Console.WriteLine("A new version of TEASConsole is available. Download here:\nhttps://github.com/dandln/TheEpicAudioStreamer/releases/\n");
-                Console.ResetColor();
+                Panel updatePanel = new Panel("A new version of TEASConsole is available.\nDownload here: [link]https://github.com/dandln/TheEpicAudioStreamer/releases/[/]");
+                updatePanel.Header = new PanelHeader("Update available");
+                updatePanel.BorderColor(Color.Red);
+                updatePanel.Expand = true;
+                AnsiConsole.Write(updatePanel);
+                AnsiConsole.WriteLine();
             }
 
             // Initialise Serilog
             var logLevelSwitch = new LoggingLevelSwitch();
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(logLevelSwitch)
-                .WriteTo.Console()
+                .WriteTo.Spectre()
                 .CreateLogger();
             Log.Debug("TEASConsole, version {0}", appVersion.ToString(3));
 
@@ -133,6 +137,13 @@ namespace TEASConsole
             {
                 // User wants to create a new config from scratch, ignore existing configuration and launch configuration assistant
                 config = Helpers.RunInteractiveConfig(configFile, guildID, botToken, audioDeviceName, channelID, adminUsers, adminRoles);
+                // Reprint greeting
+                AnsiConsole.Write(new FigletText(FigletFont.Load(Assembly.GetExecutingAssembly().GetManifestResourceStream("Resources.smslant.flf")), "TEASConsole")
+                    .Centered()
+                    .Color(Color.Purple)
+                    );
+                AnsiConsole.Write(new Text($"v{appVersion.ToString(3)}").Centered());
+                AnsiConsole.WriteLine("\n");
                 if (config == null)
                 {
                     Log.Fatal("Configuration assistant returned an invalid configuration. Please retry using valid parameters.");
@@ -267,11 +278,6 @@ namespace TEASConsole
             // Get an audio device from the user
             MMDevice AudioDevice;
             AudioDevice = Helpers.SelectDevice(config.DefaultDeviceFriendlyName);
-            while (AudioDevice == null)
-            {
-                Console.WriteLine("No valid audio device selected. Try again.\n");
-                AudioDevice = Helpers.SelectDevice(audioDeviceName);
-            }
             Log.Information("Chosen audio device is {0}", AudioDevice.DeviceFriendlyName);
 
             if (!string.IsNullOrWhiteSpace(config.DefaultChannelID))

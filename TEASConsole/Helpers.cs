@@ -1,16 +1,16 @@
-﻿using NAudio.CoreAudioApi;
-using System;
-using System.IO;
+﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
+using System.Threading;
+using Spectre.Console;
 using Serilog;
+using NAudio.CoreAudioApi;
 using TEASLibrary;
-using System.Diagnostics;
-using System.CodeDom;
-using System.Threading.Channels;
-using System.Linq;
 using static TEASLibrary.ConfigManager;
+
 
 namespace TEASConsole
 {
@@ -67,7 +67,6 @@ namespace TEASConsole
             DeviceManager devMgr = new();
             List<MMDevice> devicesList = devMgr.OutputDevicesList;
             MMDevice audioDevice;
-            int userDeviceID;
 
             // If a preselected device name is given, use this device
             if (deviceName != "")
@@ -81,33 +80,17 @@ namespace TEASConsole
                 Log.Warning("\"{0}\" was pre-defined as an audio device, but it either does not exist or is unavailable.", deviceName);
             }
 
-            // Prompt user to select a readable device ID
-            Console.WriteLine("\nPlease type the ID of the audio device you want to stream from:");
-            foreach (MMDevice device in devicesList)
-            {
-                Console.WriteLine($"[{devicesList.IndexOf(device)}] {device.DeviceFriendlyName} - {device.FriendlyName}");
-            }
-            Console.Write("> ");
-            string userInput = Console.ReadLine();
+            // Prompt user to select a device
+            List<MMDevice> tempDevicesList = new DeviceManager().OutputDevicesList;
+            AnsiConsole.WriteLine("Select an audio device to stream from:");
+            SelectionPrompt<string> devicePrompt = new SelectionPrompt<string>().PageSize(10).MoreChoicesText("[dim]Move down for more options[/]").HighlightStyle("turquoise2");
+            foreach (MMDevice device in tempDevicesList)
+                devicePrompt.AddChoice(device.DeviceFriendlyName);
+            string userInput = AnsiConsole.Prompt(devicePrompt);
+            audioDevice = devMgr.FindOutputDeviceByDeviceFriendlyName(userInput);
+            AnsiConsole.MarkupLine($"[italic][dim]Selected {userInput}[/][/]");
 
-            // Parse user input and get audio device
-            try
-            {
-                userDeviceID = int.Parse(userInput);
-                audioDevice = devicesList[userDeviceID];
-            }
-            catch (FormatException)
-            {
-                Console.WriteLine("Incorrect input. Integer ID expected.");
-                return null;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                Console.WriteLine("Not a valid device ID.");
-                return null;
-            }
-
-            Console.WriteLine();
+            AnsiConsole.WriteLine();
             return audioDevice;
         }
 
@@ -155,162 +138,172 @@ namespace TEASConsole
             else
                 createdConfig = new ConfigManager(preSetGuildId, preSetBotToken, preSetAudioDeviceName, preSetChannelId, preSetAdminUsers, preSetAdminRoles);
 
-            Console.WriteLine(
-                "------------------------------------------------------------\n" +
-                "Welcome to the interactive TEAS configuration file creator!\n" +
-                "If an existing file was parsed or options given through CLI\n" +
-                "arguments, defaults will be set accordingly.\n" +
-                "------------------------------------------------------------"
+            AnsiConsole.Write(new Rule("Welcome to the TEAS configuration creator!").RuleStyle("turquoise2").LeftJustified());
+            AnsiConsole.WriteLine(
+                "This will take you through the settings necessary to connect TEAS to your Discord Guild.\n" +
+                "If an existing file was parsed or options were given through CLI arguments, defaults will be set accordingly.\n" +
+                "Required settings will have yellow headings, optional settings green ones.\n"
                 );
 
             // GET GUILD ID
-            Console.WriteLine(
-                "STEP 1: DISCORD GUILD ID\n" +
-                "TEASConsole will make itself available to a specific Guild\n" +
-                "(i.e. a Discord Server). Right click on the desired server\n" +
-                "in Discord (make sure developer mode is enabled), then paste\n" +
-                "the ID below."
+            AnsiConsole.Write(new Rule("Step 1: Discord Guild ID").RuleStyle("yellow3_1").LeftJustified());
+            AnsiConsole.MarkupLine(
+                "TEAS will make itself available to a specific Guild, i.e. a Discord Server.\n" +
+                "Right click on the desired Guild in Discord [italic](make sure developer mode is enabled)[/],\n" +
+                "then paste the ID below."
                 );
-            if (!string.IsNullOrWhiteSpace(createdConfig.GuildID))
-                Console.WriteLine("Leave blank for default: " + createdConfig.GuildID);
-            Console.Write("> ");
-            string usrInptGuildId = Console.ReadLine();
+            string usrInptGuildId = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .DefaultValue(!string.IsNullOrEmpty(createdConfig.GuildID) ? createdConfig.GuildID : "")
+                .DefaultValueStyle("grey")
+                );
             if (!string.IsNullOrWhiteSpace(usrInptGuildId))
                 createdConfig.GuildID = usrInptGuildId;
-            Console.WriteLine("------------------------------------------------------------");
+            AnsiConsole.WriteLine();
 
             // GET BOT TOKEN
-            Console.WriteLine(
-                "STEP 2: DISCORD BOT TOKEN\n" +
-                "TEASConsole needs to connect to a Discord application.\n" +
+            AnsiConsole.Write(new Rule("Step 2: Bot Token").RuleStyle("yellow3_1").LeftJustified());
+            AnsiConsole.MarkupLine(
+                "TEAS needs to connect to a Discord application.\n" +
                 "Copy the bot token from the developer portal and paste it below.\n" +
-                "See the TEASConsole Readme for more information on how to get this."
+                "See the [link=https://github.com/dandln/TheEpicAudioStreamer]TEAS Readme[/] for a guide on how to get this."
                 );
             if (File.Exists("bottoken.txt"))
-                Console.WriteLine(
-                    "A \"bottoken.txt\" file was found in your TEASConsole folder!\n" +
-                    "Leave the input blank to use this token:\n" +
-                    createdConfig.BotToken
+                AnsiConsole.MarkupLine(
+                    "A [italic]\"bottoken.txt\"[/] file was found in your TEASConsole folder!\n" +
+                    "[dim]Leave the input blank to use this token:\n" +
+                    createdConfig.BotToken + "[/]"
                     );
-            else if (!string.IsNullOrWhiteSpace(createdConfig.BotToken))
-                Console.WriteLine("Leave blank for default: " + createdConfig.BotToken);
-            Console.Write("> ");
-            string usrInptBotToken = Console.ReadLine();
+            string usrInptBotToken = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .DefaultValue(!string.IsNullOrEmpty(createdConfig.BotToken) ? createdConfig.BotToken : "")
+                .DefaultValueStyle("grey")
+                );
             if (!string.IsNullOrWhiteSpace(usrInptBotToken))
                 createdConfig.BotToken = usrInptBotToken;
-            Console.WriteLine("------------------------------------------------------------");
+            AnsiConsole.WriteLine();
 
             // GET AUDIO DEVICE
-            Console.WriteLine(
-                "STEP 3: DEFAULT AUDIO DEVICE (optional)\n" +
-                "Type the ID or name of an audio device listed below to\n" +
-                "automatically use with every TEAS session."
-                );
-            if (!string.IsNullOrWhiteSpace(createdConfig.DefaultDeviceFriendlyName))
-                Console.WriteLine("Leave blank for default: " + createdConfig.DefaultDeviceFriendlyName);
-            else
-                Console.WriteLine("Leave blank to skip. You will then be asked\n" +
-                    "to select a device at every startup.");
+            AnsiConsole.Write(new Rule("Step 3: Default Audio Device (optional)").RuleStyle("lightgreen_1").LeftJustified());
+            AnsiConsole.WriteLine("Select an audio device listed below to automatically use with every TEAS session.");
+            if (string.IsNullOrWhiteSpace(createdConfig.DefaultDeviceFriendlyName))
+                AnsiConsole.MarkupLine("[dim]If you don't select one now, you will be asked to do so at every startup.[/]");
             List<MMDevice> tempDevicesList = new DeviceManager().OutputDevicesList;
+
+            SelectionPrompt<string> devicePrompt = new SelectionPrompt<string>().PageSize(10).MoreChoicesText("[dim]Move down for more options[/]").HighlightStyle("turquoise2");
+            devicePrompt.AddChoice("Skip");
             foreach (MMDevice device in tempDevicesList)
+                devicePrompt.AddChoice(device.DeviceFriendlyName);
+
+            string usrInptAudioDevice = AnsiConsole.Prompt(devicePrompt);
+            if (usrInptAudioDevice == "Skip")
             {
-                Console.WriteLine($"[{tempDevicesList.IndexOf(device)}] {device.DeviceFriendlyName}");
+                createdConfig.DefaultDeviceFriendlyName = "";
+                AnsiConsole.MarkupLine("[italic][dim]No device selected.[/][/]");
             }
-            Console.Write("> ");
-            string usrInptAudioDevice = Console.ReadLine();
-            if (int.TryParse(usrInptAudioDevice, out int n))
+            else
             {
-                try { createdConfig.DefaultDeviceFriendlyName = tempDevicesList[n].DeviceFriendlyName; }
-                catch (ArgumentOutOfRangeException) { Console.WriteLine("Device ID out of range. Continuing without default device..."); }
-            }
-            else if (!string.IsNullOrWhiteSpace(usrInptAudioDevice))
                 createdConfig.DefaultDeviceFriendlyName = usrInptAudioDevice;
-            Console.WriteLine("------------------------------------------------------------");
+                AnsiConsole.MarkupLine($"[italic][dim]Selected {usrInptAudioDevice}[/][/]");
+            }
+            AnsiConsole.WriteLine();
 
             // GET CHANNEL ID
-            Console.WriteLine(
-                "STEP 4: DEFAULT CHANNEL ID (optional)\n" +
-                "You can define a Discord voice channel that the bot\n" +
-                "should automatically connect to on startup. Right click on the\n" +
-                "channel (make sure dev mode is enabled) and paste the ID below."
+            AnsiConsole.Write(new Rule("Step 4: Default Channel (optional)").RuleStyle("lightgreen_1").LeftJustified());
+            AnsiConsole.MarkupLine(
+                "You can define a Discord voice channel that TEAS automatically connects to on startup.\n" +
+                "Right click on the channel [italic](make sure dev mode is enabled[/] and paste the ID below."
                 );
-            if (!string.IsNullOrWhiteSpace(createdConfig.DefaultChannelID))
-                Console.WriteLine("Leave blank for default: " + createdConfig.DefaultChannelID);
-            else
-                Console.WriteLine("Leave blank to skip.");
-            Console.Write("> ");
-            string usrInptChannel = Console.ReadLine();
-            if (!string.IsNullOrWhiteSpace(usrInptChannel))
-            {
-                try { Int64.Parse(usrInptChannel); createdConfig.DefaultChannelID = usrInptChannel; }
-                catch (Exception) { Console.WriteLine("Channel ID is invalid. Continuing without default channel..."); }
-            }
-            Console.WriteLine("------------------------------------------------------------");
+            if (string.IsNullOrWhiteSpace(createdConfig.DefaultChannelID))
+                AnsiConsole.MarkupLine("[dim]Leave blank to skip.[/]");
+            string usrInptChannel = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .AllowEmpty()
+                .DefaultValue(!string.IsNullOrEmpty(createdConfig.DefaultChannelID) ? createdConfig.DefaultChannelID : "")
+                .DefaultValueStyle("grey")
+                .Validate(id =>
+                {
+                    if (Int64.TryParse(id, out Int64 num) || id == "")
+                        return ValidationResult.Success();
+                    else
+                        return ValidationResult.Error("[red]Channel ID can only consist of numbers.[/]");
+                }
+                ));
+            createdConfig.DefaultChannelID = usrInptChannel;
+            AnsiConsole.WriteLine();
 
             // GET ADMIN USERS
-            Console.WriteLine(
-                "STEP 5: ADMIN USERS (optional)\n" +
+            AnsiConsole.Write(new Rule("Step 5: Admin Users (optional)").RuleStyle("lightgreen_1").LeftJustified());
+            AnsiConsole.WriteLine(
                 "You can enter a comma-separated list of admin users below.\n" +
                 "These will be able to issue commands to the bot."
                 );
-            if (createdConfig.AdminUsers.Count > 0)
-                Console.WriteLine("Leave blank for default: " + string.Join(',', createdConfig.AdminUsers.ToArray()));
-            else
-                Console.WriteLine("Leave blank to skip.");
-            Console.Write("> ");
-            string usrInptAdminUsers = Console.ReadLine();
+            if (createdConfig.AdminUsers.Count == 0)
+                AnsiConsole.MarkupLine("[dim]Leave blank to skip.[/]");
+            string usrInptAdminUsers = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .AllowEmpty()
+                .DefaultValue(createdConfig.AdminUsers.Count > 0 ? string.Join(',', createdConfig.AdminUsers.ToArray()) : "")
+                .DefaultValueStyle("grey")
+                );
             if (!string.IsNullOrWhiteSpace(usrInptAdminUsers))
                 createdConfig.AdminUsers = usrInptAdminUsers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-            Console.WriteLine("------------------------------------------------------------");
+            AnsiConsole.WriteLine() ;
 
             // GET ADMIN ROLES
-            Console.WriteLine(
-                "STEP 6: ADMIN ROLES (optional)\n" +
+            AnsiConsole.Write(new Rule("Step 6: Admin Roles (optional)").RuleStyle("lightgreen_1").LeftJustified());
+            AnsiConsole.WriteLine(
                 "You can enter a comma-separated list of admin roles below.\n" +
                 "Users with these roles are able to issue commands to the bot."
                 );
-            if (createdConfig.AdminRoles.Count > 0)
-                Console.WriteLine("Leave blank for default: " + string.Join(',', createdConfig.AdminRoles.ToArray()));
-            else
-                Console.WriteLine("Leave blank to skip.");
-            Console.Write("> ");
-            string usrInptAdminRoles = Console.ReadLine();
+            if (createdConfig.AdminRoles.Count == 0)
+                AnsiConsole.MarkupLine("[dim]Leave blank to skip.[/]");
+            string usrInptAdminRoles = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .AllowEmpty()
+                .DefaultValue(createdConfig.AdminRoles.Count > 0 ? string.Join(',', createdConfig.AdminRoles.ToArray()) : "")
+                .DefaultValueStyle("grey")
+                );
             if (!string.IsNullOrWhiteSpace(usrInptAdminRoles))
                 createdConfig.AdminRoles = usrInptAdminRoles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-            Console.WriteLine("------------------------------------------------------------");
+            AnsiConsole.WriteLine();
 
             // VALIDATE CONFIG
-            Console.Write("That's everything! Validating config... ");
-            try {
+            AnsiConsole.Write(new Rule("That's all!").RuleStyle("turquoise2").LeftJustified());
+            AnsiConsole.Write("Validating config... ");
+            try
+            {
                 createdConfig.Validate();
             }
             catch (ConfigValidationFailedException ex)
             {
-                Console.WriteLine("Config validation failed! " + ex.Message);
+                AnsiConsole.MarkupLine("[red]Config validation failed![/] " + ex.Message);
                 return null;
             }
 
             // SAVE CONFIG AND RETURN
-            Console.WriteLine("Success!");
-            Console.WriteLine("Enter a file name or full path at which the config\n" +
-                "will be saved, or leave empty for default: " + configFilePath);
-            Console.Write("> ");
-            string usrInptFilePath = Console.ReadLine();
+            AnsiConsole.MarkupLine("[green]Success![/]");
+            AnsiConsole.WriteLine("Enter a file name or full path at which the config will be saved.");
+            AnsiConsole.MarkupLine("[dim]Leave blank for default.[/]");
+
+            string usrInptFilePath = AnsiConsole.Prompt(new TextPrompt<string>("> ")
+                .AllowEmpty()
+                .DefaultValue(configFilePath)
+                .DefaultValueStyle("grey")
+                );
             if (!string.IsNullOrWhiteSpace(usrInptFilePath))
                 configFilePath = usrInptFilePath;
             try
             {
                 createdConfig.Write(configFilePath);
-                Console.WriteLine("Config file saved. Returning to TEASConsole...");
-                Console.WriteLine();
+                AnsiConsole.MarkupLine("[green]Config file saved.[/] Returning to TEASConsole in 3 seconds...");
+                AnsiConsole.WriteLine();
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occured while saving the config file: " + ex.Message + "\n" +
-                    "The generated configuration will be used for this session, but not saved.\n" +
-                    "Returning to TEASConsole...");
-                Console.WriteLine();
+                AnsiConsole.MarkupLine("[red]An error occured while saving the config file:[/] " + ex.Message + "\n" +
+                    "The generated configuration will be used for this session, but will not be saved.\n" +
+                    "Returning to TEASConsole in 3 seconds...");
+                AnsiConsole.WriteLine();
             }
+
+            Thread.Sleep(3000);
+            AnsiConsole.Clear();
 
             return createdConfig;
         }
