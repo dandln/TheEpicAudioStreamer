@@ -1,5 +1,5 @@
 # TheEpicAudioStreamer (TEAS)
-TEAS is a Discord bot that allows you to stream audio directly from a local audio device to a voice channel. It runs through a Windows console application called TEASConsole, that accesses your local audio devices.
+TEAS is a Discord bot that allows you to stream audio directly from a local device to a voice channel through a Windows console application called TEASConsole.
 
 There is a little bit of setup needed on first time use, but running the bot afterwards is very straightforward. This Readme contains detailed instructions and documentation for set up and usage.
 
@@ -20,7 +20,7 @@ To run TEAS, you will need two things: A **bot token** for a Discord application
 ### Creating an application and retrieving the bot token
 1. Go to the [Applications](https://discord.com/developers/applications) section of the Discord Developer Portal and click the button "New Application" in the top right corner.
 2. Enter a name for your application, which should be the same as the one you want your bot to have, accept the ToS and click "Create".
-3. You can enter a description and upload an image for your application, this will be displayed when you invite your bot to your server.
+3. You can enter a description and upload an image for your application, this will be displayed when you invite the bot to your server.
 4. Go to "Bot" in the settings sidebar, click "Add Bot" and acknowledge the warning with "Yes, do it!"
 5. Deselect the "Public Bot" setting, leave the rest of the options untouched.
 6. Head back to the "General Information" tab and make a note of your "Application ID".
@@ -40,8 +40,8 @@ Now that you have both your bot token and the Guild ID, follow these steps to ru
     2. Enter or paste the bot token of the application you created
     3. A list of audio output devices on your system will be displayed. You can select one to automatically use in this configuration. If you skip this step, you will be asked to select an audio device on each startup. *It is recommended to use a virtual audio device solution like [VB-Cable](https://vb-audio.com/Cable/) for this.*
     4. You can enter or paste the ID of a voice channel on your server that the bot automatically connects and streams audio to on startup. If left blank, you will need to manually connect the bot to a voice channel (see ["Discord Slash Commands"](#user-content-discord-slash-commands)). To retrieve a channel ID, make sure Developer Mode is enabled in User Settings -> Advanced, then right-click on the voice channel of your choice and click "Copy ID".
-    5. You can optionally enter a comma-separated list of Discord users in the format `<username>#<discriminator>` that will be able to issue Slash Commands to the bot
-    6. You can optionally enter a comma-separated list of user roles. Users with those roles will be able to issue Slash Commands to the bot
+    5. You can optionally enter a comma-separated list of Discord usernames that will be able to issue Slash Commands to the bot
+    6. You can optionally enter a comma-separated list of user roles. Users with these roles will be able to issue Slash Commands to the bot
     7. If your configuration is valid, TEASConsole will prompt you to enter a file name or path where your configuration will be saved. Note that by default, TEASConsole will look for a file called `botconfig.txt` upon startup, so it is recommended to leave the file name as it is unless you intend to use multiple configurations. See ["Command Line Usage"](#user-content-command-line-usage) for more information.
 5. TEASConsole will now connect to your bot and is ready to receive commands in the text channels of your server as long as the application window is open or until you terminate the process in the command prompt.
 
@@ -67,10 +67,11 @@ The following arguments are supported to override options found in the config fi
 * `-c` or `--channel` - The ID of a Discord channel that the bot will connect to on startup
 * `--admin-names` - A comma-separated list of Discord users that the bot will accept commands from
 * `--admin-roles` - A comma-separated list of server role names that the bot will accept commands from
+* `--activity` - An activity that the bot will display ("Playing...")
 
 The following misc arguments are supported:
 * `--new` - Launches the configuration assistant regardless of whether a valid config file was found at the given location. If one exists, default values will be set according to the content of the file.
-* `--verbose` - Enables debug messages
+* `--verbose` - Enables debug logging
 
 ## Migrating from v0.5.2 or earlier
 Version 0.6 of TEASConsole introduced a new format for configuration files and changed the way that it registers Slash Commands on the Discord server. Because of that, a Discord Guild ID is now needed to run the bot. See ["Retrieving the Guild ID"](#user-content-retrieving-the-guild-id) for how to get this.
