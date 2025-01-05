@@ -6,6 +6,7 @@ using DSharpPlus.SlashCommands;
 using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
+using Serilog;
 
 namespace TEASLibrary
 {
@@ -44,94 +45,92 @@ namespace TEASLibrary
         /// </summary>
         protected DiscordChannel? DefaultChannel { get; private set; }
 
+        /// <summary>
+        /// Stores the current connection object from a voice channel connection
+        /// </summary>
+        public VoiceNextConnection? CurrentConnection { get; set; } = null;
+
         private EventHandler<WaveInEventArgs>? AudioHandler;
 
         /// <summary>
         /// Constructs a new Bot object with the given parameters
         /// </summary>
         /// <param name="botConfig">The TEAS configuration object to be used by the bot</param>
-        /// <param name="logFactory">An optional LoggerFactory object that will be passed to DSharpPlus to handle logging of events</param>
         /// <param name="audioDevice">An optionally pre-defined audio device to be used for streaming</param>
         /// <param name="verbose">Define whether debug log messages should be displayed. Defaults to false</param>
-        public Bot(ConfigManager botConfig, ILoggerFactory? logFactory = null, MMDevice? audioDevice = null, bool verbose = false)
+        public Bot(ConfigManager botConfig, MMDevice? audioDevice = null, bool verbose = false)
         {
             BotConfig = botConfig;
             ChangeAudioDevice(audioDevice);
 
             // Create Discord configuration
-            DiscordConfiguration discordConfig = new()
-            {
-                Token = BotConfig.BotToken,
-                TokenType = TokenType.Bot
-            };
-
-            // Set log factory if parameter is not null
-            if (logFactory != null)
-                discordConfig.LoggerFactory = logFactory;
+            DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(BotConfig.BotToken, DiscordIntents.AllUnprivileged);
+            builder.ConfigureLogging(loggingBuilder => loggingBuilder.AddSerilog());
 
             // Set debug log level if verbose is set
             if (verbose == true)
-                discordConfig.MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug;
+                builder.SetLogLevel(LogLevel.Debug);
 
-            // Create client object
-            Discord = new DiscordClient(discordConfig);
+            // Indicate the use of voicenext
+            builder.UseVoiceNext(new VoiceNextConfiguration());
 
-            // Register guild-specific Slash Commands
-            var slashCmds = Discord.UseSlashCommands(new SlashCommandsConfiguration
+            builder.ConfigureServices(services => services.AddSingleton<Bot>(this).BuildServiceProvider());
+
+            builder.UseSlashCommands(cmdExtension =>
             {
-                Services = new ServiceCollection().AddSingleton<Bot>(this).BuildServiceProvider()
+                cmdExtension.RegisterCommands<SlashCommands>(ulong.Parse(BotConfig.GuildID));
+                cmdExtension.SlashCommandInvoked += async (s, e) =>
+                {
+                    s.Client.Logger.LogInformation("{CommandName} issued by {User}", e.Context.CommandName, e.Context.Member.Username);
+                };
+                cmdExtension.SlashCommandExecuted += async (s, e) =>
+                {
+                    s.Client.Logger.LogDebug("Successfully executed {CommandName}, issued by {User}", e.Context.CommandName, e.Context.Member.Username);
+                };
+                cmdExtension.SlashCommandErrored += async (s, e) =>
+                {
+                    s.Client.Logger.LogError("{CommandName} threw the following exception: {ExceptionType} - {ExceptionMessage}", e.Context.CommandName, e.Exception.GetType(), e.Exception.Message);
+                };
             });
-            slashCmds.RegisterCommands<SlashCommands>(ulong.Parse(BotConfig.GuildID));
 
-            // Register event handlers for logging command activity
-            slashCmds.SlashCommandInvoked += async (s, e) =>
-            {
-                Discord.Logger.LogInformation("{CommandName} issued by {User}", e.Context.CommandName, e.Context.Member.Username);
-            };
-            slashCmds.SlashCommandExecuted += async (s, e) =>
-            {
-                Discord.Logger.LogDebug("Successfully executed {CommandName}, issued by {User}", e.Context.CommandName, e.Context.Member.Username);
-            };
-            slashCmds.SlashCommandErrored += async (s, e) =>
-            {
-                Discord.Logger.LogError("{CommandName} threw the following exception: {ExceptionType} - {ExceptionMessage}", e.Context.CommandName, e.Exception.GetType(), e.Exception.Message);
-            };
-
-            // Register event handler to GuildDownloadCompleted to run validation of passed guild and channel IDs and potentially connect to a voice channel
-            Discord.GuildDownloadCompleted += async (s, e) =>
-            {
-                // Validate and save Guild that the user has defined for the bot
-                try
-                {
-                    Guild = Discord.Guilds[ulong.Parse(BotConfig.GuildID)];
-                }
-                catch (KeyNotFoundException)
-                {
-                    Discord.Logger.LogCritical("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
-                    throw new KeyNotFoundException("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
-                }
-
-                // Validate and save default Channel if the user has defined one
-                if (!string.IsNullOrWhiteSpace(BotConfig.DefaultChannelID))
-                {
-                    try
+            builder.ConfigureEventHandlers
+                (
+                    // Register event handler to GuildDownloadCompleted to run validation of passed guild and channel IDs and potentially connect to a voice channel
+                    b => b.HandleGuildDownloadCompleted(async (s, e) =>
                     {
-                        DefaultChannel = Guild.Channels[ulong.Parse(BotConfig.DefaultChannelID)];
-                    }
-                    catch (KeyNotFoundException)
-                    {
-                        Discord.Logger.LogWarning("Passed Channel ID is invalid! Check bot configuration and make sure the channel is in the defined guild. " +
-                            "Bot will not automatically connect.");
-                    }
-                }
+                        // Validate and save Guild that the user has defined for the bot
+                        try
+                        {
+                            Guild = s.Guilds[ulong.Parse(BotConfig.GuildID)];
+                        }
+                        catch (KeyNotFoundException)
+                        {
+                            s.Logger.LogCritical("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
+                            throw new KeyNotFoundException("Passed Guild ID is invalid! Check bot configuration and make sure the bot is in the referenced guild.");
+                        }
 
-                // If default channel is set, connect on startup
-                if (DefaultChannel != null)
-                    AutoConnectToVoice();
-            };
+                        // Validate and save default Channel if the user has defined one
+                        if (!string.IsNullOrWhiteSpace(BotConfig.DefaultChannelID))
+                        {
+                            try
+                            {
+                                DefaultChannel = Guild.Channels[ulong.Parse(BotConfig.DefaultChannelID)];
+                            }
+                            catch (KeyNotFoundException)
+                            {
+                                s.Logger.LogWarning("Passed Channel ID is invalid! Check bot configuration and make sure the channel is in the defined guild. " +
+                                    "Bot will not automatically connect.");
+                            }
+                        }
 
-            // Indicate the use of VoiceNext
-            Discord.UseVoiceNext();
+                        // If default channel is set, connect on startup
+                        if (DefaultChannel is not null)
+                            AutoConnectToVoice();
+                    })
+                );
+
+            // Build the DiscordClient
+            Discord = builder.Build();
         }
 
         /// <summary>
@@ -141,7 +140,7 @@ namespace TEASLibrary
         {
             try {
                 if (!string.IsNullOrWhiteSpace(botActivity))
-                    await Discord.ConnectAsync(activity: new DiscordActivity() { ActivityType = ActivityType.Playing, Name = botActivity });
+                    await Discord.ConnectAsync(activity: new DiscordActivity() { ActivityType = DiscordActivityType.Playing, Name = botActivity });
                 else
                     await Discord.ConnectAsync();
             }
@@ -166,9 +165,8 @@ namespace TEASLibrary
         /// </summary>
         private async void AutoConnectToVoice()
         {
-            var vnext = Discord.GetVoiceNext();
-            var connection = await vnext.ConnectAsync(DefaultChannel);
-            var stream = connection.GetTransmitSink();
+            CurrentConnection = await DefaultChannel!.ConnectAsync();
+            var stream = CurrentConnection.GetTransmitSink();
 
             // If audio device and capture instance are set, begin streaming
             if (Capture != null && AudioDevice != null)
@@ -177,10 +175,10 @@ namespace TEASLibrary
                 AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => SlashCommands.AudioDataAvilableEventHander(s, e, stream, Capture));
                 Capture.DataAvailable += AudioHandler;
                 Capture.StartRecording();
-                Discord.Logger.LogInformation("Bot connected to default channel {0} and started streaming", DefaultChannel.Name);
+                Discord.Logger.LogInformation("Bot connected to default channel {0} and started streaming", DefaultChannel!.Name);
             }
             else
-                Discord.Logger.LogInformation("Bot connected to default channel {0}", DefaultChannel.Name);
+                Discord.Logger.LogInformation("Bot connected to default channel {0}", DefaultChannel!.Name);
         }
 
         /// <summary>
@@ -221,19 +219,17 @@ namespace TEASLibrary
             [SlashCommand("join", "Join the current voice channel")]
             public async Task Join(InteractionContext ctx)
             {
-                var vnext = ctx.Client.GetVoiceNext();
-                var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-                var voicestate = ctx.Member?.VoiceState;
+                var voicestate = ctx.Member!.VoiceState;
 
                 if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions:true, checkBotNotConnected:true, checkUserConnected:true))
                     return;
 
                 // Connect to voice channel
-                DiscordChannel channel = voicestate.Channel;
-                connection = await vnext.ConnectAsync(channel);
+                DiscordChannel channel = voicestate.Channel!;
+                BotInstance.CurrentConnection = await channel.ConnectAsync();
 
                 // Open transmit stream
-                var stream = connection.GetTransmitSink();
+                var stream = BotInstance.CurrentConnection.GetTransmitSink();
 
                 if (BotInstance.Capture != null && BotInstance.AudioDevice != null)
                 {
@@ -242,56 +238,52 @@ namespace TEASLibrary
                     BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
                 }
 
-                if (channel.Parent != null)
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                if (channel.Parent is not null)
+                    await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}** in {channel.Parent.Name}")));
                 else
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Green, $"Bot connected to **{channel.Name}**")));
             }
 
             [SlashCommand("start", "Start streaming. Bot needs to be connected to a voice channel")]
             public async Task Start(InteractionContext ctx)
             {
-                var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-
-                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions:true, checkBotConnected:true, checkDeviceSelected:true, checkBotNotStreaming:true))
+                if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions: true, checkBotConnected:true, checkDeviceSelected:true, checkBotNotStreaming:true))
                     return;
 
-                BotInstance.Capture.StartRecording();
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
+                BotInstance.Capture!.StartRecording();
+                await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice!.FriendlyName}**")));
             }
 
             [SlashCommand("joinst", "Join the current voice channel and immediately start streaming")]
             public async Task Joinst(InteractionContext ctx)
             {
-                var vnext = ctx.Client.GetVoiceNext();
-                var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-                var voicestate = ctx.Member?.VoiceState;
+                var voicestate = ctx.Member!.VoiceState;
 
                 if (!Utils.CheckCommandFeasibility(ctx, BotInstance, checkPermissions: true, checkUserConnected: true, checkDeviceSelected: true, checkBotNotConnected:true, checkBotNotStreaming:true))
                     return;
 
                 // Connect to voice channel
-                DiscordChannel channel = voicestate.Channel;
-                connection = await vnext.ConnectAsync(channel);
+                DiscordChannel channel = voicestate.Channel!;
+                BotInstance.CurrentConnection = await channel.ConnectAsync();
 
                 // Open transmit stream
-                var stream = connection.GetTransmitSink();
+                var stream = BotInstance.CurrentConnection.GetTransmitSink();
 
                 // Initialise event handler for audio captured
-                BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
-                BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
+                BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture!));
+                BotInstance.Capture!.DataAvailable += BotInstance.AudioHandler;
 
                 // Start capturing
                 BotInstance.Capture.StartRecording();
-                if (voicestate.Channel.Parent == null)
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
+                if (voicestate.Channel!.Parent is null)
+                    await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** and streaming from device **{BotInstance.AudioDevice!.FriendlyName}**")));
                 else
-                    await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** in **{voicestate.Channel.Parent.Name}** and streaming from device **{BotInstance.AudioDevice.FriendlyName}**")));
+                    await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                        (Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{voicestate.Channel.Name}** in **{voicestate.Channel.Parent.Name}** and streaming from device **{BotInstance.AudioDevice!.FriendlyName}**")));
             }
 
             [SlashCommand("stop", "Stop streaming")]
@@ -301,8 +293,8 @@ namespace TEASLibrary
                     return;
 
                 // Stop capturing
-                BotInstance.Capture.StopRecording();
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                BotInstance.Capture!.StopRecording();
+                await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                     (Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming")));
             }
 
@@ -324,10 +316,11 @@ namespace TEASLibrary
                     BotInstance.Capture.DataAvailable -= BotInstance.AudioHandler;
                     BotInstance.AudioHandler = null;
                 }
-                
+
                 // Disconnect
-                ctx.Client.GetVoiceNext().GetConnection(ctx.Guild).Disconnect();
-                await ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                BotInstance.CurrentConnection!.Disconnect();
+                BotInstance.CurrentConnection = null;
+                await ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                     (Utils.GenerateEmbed(DiscordColor.Green, "Disconnected")));
             }
 
@@ -338,7 +331,7 @@ namespace TEASLibrary
             /// <param name="device">The WasapiLoopbackCapture device</param>
             internal static async void AudioDataAvilableEventHander(object s, WaveInEventArgs e, VoiceTransmitSink sink, WasapiLoopbackCapture device)
             {
-                // If audio data is available, convert it into PCM16 format and write it into the stream.
+                // If audio data is available, convert it into PCM16 format and write it into the sink.
                 if (e.Buffer.Length > 0)
                 {
                     await sink.WriteAsync(Utils.AudioToPCM16(e.Buffer, e.BytesRecorded, device.WaveFormat));

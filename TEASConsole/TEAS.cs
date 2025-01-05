@@ -302,8 +302,7 @@ namespace TEASConsole
                 Log.Information("Admin roles: {0}", string.Join(',', config.AdminUsers.ToArray()));
 
             // When all options and configurations are parsed, create a new bot object and run it.
-            var logFactory = new LoggerFactory().AddSerilog();
-            Bot bot = new(config, logFactory, AudioDevice, verbose);
+            Bot bot = new(config, AudioDevice, verbose);
 
             if (!string.IsNullOrWhiteSpace(config.BotActivity))
                 bot.Connect(config.BotActivity).GetAwaiter().GetResult();

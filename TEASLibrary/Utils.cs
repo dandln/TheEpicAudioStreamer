@@ -57,6 +57,7 @@ namespace TEASLibrary
         /// </summary>
         /// <param name="ctx">The InteractionContext of the command</param>
         /// <param name="botInstance">The admin username provided to the bot instance</param>
+        /// <param name="currConnection">The current VoiceNextConnection object</param>
         /// <param name="checkPermissions">Check whether the user issuing the command has permissions to execute it</param>
         /// <param name="checkBotConnected">Check whether the bot is connected to a voice channel</param>
         /// <param name="checkBotNotConnected">Check whether the bot is not connected to a voice channel</param>
@@ -76,18 +77,18 @@ namespace TEASLibrary
             bool checkBotStreaming = false,
             bool checkBotNotStreaming = false)
         {
-            var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
+            var connection = botInstance.CurrentConnection;
             var voicestate = ctx.Member?.VoiceState;
 
             if (checkPermissions)
             {
                 // Return false if user is neither owner of the appliaction, server manager, flagged as an admin user nor has a role flagged as an admin role
                 if (!ctx.Client.CurrentApplication.Owners.Contains(ctx.User) &&
-                    !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DSharpPlus.Permissions.ManageGuild) &&
+                    !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DiscordPermission.ManageGuild) &&
                     !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username) &&
                     !CheckIfAdminRole(ctx.Member, botInstance.BotConfig.AdminRoles))
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Permission denied", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -98,7 +99,7 @@ namespace TEASLibrary
                 // Returns false if the bot is not currently connected to a voice channel
                 if (connection == null)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -109,7 +110,7 @@ namespace TEASLibrary
                 // Returns false if the bot is already connected to a voice channel
                 if (connection != null)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -118,9 +119,9 @@ namespace TEASLibrary
             if (checkUserConnected)
             {
                 // Returns false if the member issuing the command is not currently connected to a voice channel
-                if (voicestate?.Channel == null)
+                if (voicestate?.Channel is null)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Member not in a voice channel", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -131,7 +132,7 @@ namespace TEASLibrary
                 // Returns false if the audio device the bot is currently using, or the corresponding capture instance, is null
                 if (botInstance.Capture == null || botInstance.AudioDevice == null)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -142,7 +143,7 @@ namespace TEASLibrary
                 // Returns false if the bot is currently not capturing audio
                 if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Capturing)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -154,7 +155,7 @@ namespace TEASLibrary
                 // Returns false if the bot is currently capturing audio
                 if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Stopped)
                 {
-                    ctx.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
+                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
                         (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already streaming")).AsEphemeral(true));
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.CommandName, ctx.Member.Username);
                     return false;
@@ -214,20 +215,6 @@ namespace TEASLibrary
             };
 
             return embed.Build();
-        }
-
-        /// <summary>
-        /// Checks whether the bot is connected to a voice channel.
-        /// </summary>
-        /// <param name="ctx">The current command context.</param>
-        /// <returns>True if connected, false if not.</returns>
-        internal static bool CheckConnectionStatus(InteractionContext ctx)
-        {
-            var connection = ctx.Client.GetVoiceNext().GetConnection(ctx.Guild);
-            if (connection == null)
-                return false;
-            else
-                return true;
         }
     }
 }
