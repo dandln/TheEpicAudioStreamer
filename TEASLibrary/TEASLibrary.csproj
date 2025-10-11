@@ -10,11 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02445" />
-    <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-02445" />
-    <PackageReference Include="DSharpPlus.VoiceNext" Version="5.0.0-nightly-02445" />
+    <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02551" />
+    <PackageReference Include="DSharpPlus.SlashCommands" Version="5.0.0-nightly-02551" />
+    <PackageReference Include="DSharpPlus.VoiceNext" Version="5.0.0-nightly-02551" />
     <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
   </ItemGroup>
 
 </Project>
