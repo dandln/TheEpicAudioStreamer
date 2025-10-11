@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
 using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
+using DSharpPlus.Commands;
 using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using DSharpPlus.Commands.Processors.SlashCommands;
 
 namespace TEASLibrary
 {
@@ -66,8 +67,8 @@ namespace TEASLibrary
         /// <param name="checkBotStreaming">Check whether the bot is currently streaming</param>
         /// <param name="checkBotNotStreaming">Check whether the bot is not currently streaming</param>
         /// <returns>True if all checks have passed, false if one of the checks has failed (i.e. returned false itself)</returns>
-        public static bool CheckCommandFeasibility(
-            InteractionContext ctx,
+        public static async Task<bool> CheckCommandFeasibilityAsync(
+            SlashCommandContext ctx,
             Bot botInstance,
             bool checkPermissions = false,
             bool checkBotConnected = false,
@@ -78,19 +79,17 @@ namespace TEASLibrary
             bool checkBotNotStreaming = false)
         {
             var connection = botInstance.CurrentConnection;
-            var voicestate = ctx.Member?.VoiceState;
 
             if (checkPermissions)
             {
                 // Return false if user is neither owner of the appliaction, server manager, flagged as an admin user nor has a role flagged as an admin role
-                if (!ctx.Client.CurrentApplication.Owners.Contains(ctx.User) &&
+                if (!ctx.Client.CurrentApplication.Owners!.Contains(ctx.User) &&
                     !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DiscordPermission.ManageGuild) &&
                     !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username) &&
                     !CheckIfAdminRole(ctx.Member, botInstance.BotConfig.AdminRoles))
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Permission denied", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, $"Sorry {ctx.Member.Mention}, you're not the DJ today"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Permission denied", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
@@ -99,9 +98,8 @@ namespace TEASLibrary
                 // Returns false if the bot is not currently connected to a voice channel
                 if (connection == null)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
@@ -110,20 +108,18 @@ namespace TEASLibrary
                 // Returns false if the bot is already connected to a voice channel
                 if (connection != null)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
             if (checkUserConnected)
             {
                 // Returns false if the member issuing the command is not currently connected to a voice channel
-                if (voicestate?.Channel is null)
+                if (ctx.Member.VoiceState is null)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "You are not in a voice channel")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Member not in a voice channel", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "You are not in a voice channel"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Member not in a voice channel", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
@@ -132,9 +128,8 @@ namespace TEASLibrary
                 // Returns false if the audio device the bot is currently using, or the corresponding capture instance, is null
                 if (botInstance.Capture == null || botInstance.AudioDevice == null)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "No audio device is selected")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "No audio device is selected"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
@@ -143,9 +138,8 @@ namespace TEASLibrary
                 // Returns false if the bot is currently not capturing audio
                 if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Capturing)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is not streaming")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is not streaming"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
@@ -155,9 +149,8 @@ namespace TEASLibrary
                 // Returns false if the bot is currently capturing audio
                 if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Stopped)
                 {
-                    ctx.CreateResponseAsync(DiscordInteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed
-                        (Utils.GenerateEmbed(DiscordColor.Red, "Bot is already streaming")).AsEphemeral(true));
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.CommandName, ctx.Member.Username);
+                    await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is already streaming"), ephemeral: true);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.Command.Name, ctx.Member.Username);
                     return false;
                 }
             }
