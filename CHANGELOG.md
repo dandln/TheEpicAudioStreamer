@@ -1,4 +1,9 @@
 # Changelog
+### v0.7.1 - 2026-09-12
+* Major code changes to adapt to a new version of the underlying Discord API library, which makes the bot play sound again - kind of important for a audio streaming bot!
+* Minor code changes to adapt to a new version of the Windows sound API library used to capture audio
+* Updated dependencies
+
 ### v0.7.0 - 2024-04-14
 * Made TEASConsole prettier. This mainly affects the config creator, which is now more user-friendly
 * Added option to supply a custom activity to the bot
