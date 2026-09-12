@@ -1,11 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
-using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.Commands;
-using DSharpPlus.VoiceNext;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 using DSharpPlus.Commands.Processors.SlashCommands;
 
 namespace TEASLibrary
@@ -16,39 +12,26 @@ namespace TEASLibrary
     public static class Utils
     {
         /// <summary>
-        /// Converts an IEEE Floating Point audio buffer into a 16bit PCM compatible buffer
+        /// Initialises the audio recorder instance bassed on the passed audio device.
         /// </summary>
-        /// <param name="inputBuffer">The buffer in IEEE Floating Point format</param>
-        /// <param name="length">The number of bytes in the buffer</param>
-        /// <param name="format">The WaveFormat of the buffer</param>
-        /// <returns>A byte array that represents the given buffer converted into PCM format</returns>
-        internal static byte[] AudioToPCM16(byte[] inputBuffer, int length, WaveFormat format)
+        /// <returns>The initialised WasapiRecorder instance, or null if no device was initialised.</returns>
+        /// <param name="audioDevice">The audio device to use, can be null if no device is used/available</param>
+        public static WasapiRecorder? InitializeAudioRecorder(MMDevice? audioDevice)
         {
-            if (length == 0)
-                return Array.Empty<byte>(); // No bytes recorded, return empty array
-
-            // Create a WaveStream from the input buffer.
-            using var memStream = new MemoryStream(inputBuffer, 0, length);
-            using var inputStream = new RawSourceWaveStream(memStream, format);
-
-            // Convert the input stream to a WaveProvider in 16bit PCM format with sample rate of 48000 Hz
-            var convertedPCM = new SampleToWaveProvider16(
-                new WdlResamplingSampleProvider(
-                    new WaveToSampleProvider(inputStream),
-                    48000)
-                );
-
-            byte[] convertedBuffer = new byte[length];
-
-            using var stream = new MemoryStream();
-            int read;
-
-            // Read the converted WaveProvider into a buffer and turn it into a Stream
-            while ((read = convertedPCM.Read(convertedBuffer, 0, length)) > 0)
-                stream.Write(convertedBuffer, 0, read);
-
-            // Return the converted Stream as a byte array
-            return stream.ToArray();
+            if (audioDevice != null)
+            {
+                WasapiRecorder audioRecorder = new WasapiRecorderBuilder()
+                    .WithDevice(audioDevice)
+                    .WithBufferLength(100)
+                    .WithFormat(new WaveFormat(48000, 16, 2))
+                    .WithLoopbackCapture()
+                    .Build();
+                return audioRecorder;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -58,7 +41,6 @@ namespace TEASLibrary
         /// </summary>
         /// <param name="ctx">The InteractionContext of the command</param>
         /// <param name="botInstance">The admin username provided to the bot instance</param>
-        /// <param name="currConnection">The current VoiceNextConnection object</param>
         /// <param name="checkPermissions">Check whether the user issuing the command has permissions to execute it</param>
         /// <param name="checkBotConnected">Check whether the bot is connected to a voice channel</param>
         /// <param name="checkBotNotConnected">Check whether the bot is not connected to a voice channel</param>
@@ -84,7 +66,7 @@ namespace TEASLibrary
             {
                 // Return false if user is neither owner of the appliaction, server manager, flagged as an admin user nor has a role flagged as an admin role
                 if (!ctx.Client.CurrentApplication.Owners!.Contains(ctx.User) &&
-                    !ctx.Member.PermissionsIn(ctx.Channel).HasFlag(DiscordPermission.ManageGuild) &&
+                    !ctx.Member!.PermissionsIn(ctx.Channel).HasFlag(DiscordPermission.ManageGuild) &&
                     !botInstance.BotConfig.AdminUsers.Contains(ctx.Member.Username) &&
                     !CheckIfAdminRole(ctx.Member, botInstance.BotConfig.AdminRoles))
                 {
@@ -99,7 +81,7 @@ namespace TEASLibrary
                 if (connection == null)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is not connected to a voice channel"), ephemeral: true);
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.Command.Name, ctx.Member.Username);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not in a voice channel", ctx.Command.Name, ctx.Member!.Username);
                     return false;
                 }
             }
@@ -109,14 +91,14 @@ namespace TEASLibrary
                 if (connection != null)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is already connected to a voice channel"), ephemeral: true);
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.Command.Name, ctx.Member.Username);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already in a voice channel", ctx.Command.Name, ctx.Member!.Username);
                     return false;
                 }
             }
             if (checkUserConnected)
             {
                 // Returns false if the member issuing the command is not currently connected to a voice channel
-                if (ctx.Member.VoiceState is null)
+                if (ctx.Member!.VoiceState is null)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "You are not in a voice channel"), ephemeral: true);
                     ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Member not in a voice channel", ctx.Command.Name, ctx.Member.Username);
@@ -125,21 +107,21 @@ namespace TEASLibrary
             }
             if (checkDeviceSelected)
             {
-                // Returns false if the audio device the bot is currently using, or the corresponding capture instance, is null
-                if (botInstance.Capture == null || botInstance.AudioDevice == null)
+                // Returns false if the audio device the bot is currently using is null
+                if (botInstance.AudioDevice == null)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "No audio device is selected"), ephemeral: true);
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.Command.Name, ctx.Member.Username);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - No active audio device", ctx.Command.Name, ctx.Member!.Username);
                     return false;
                 }
             }
             if (checkBotStreaming)
             {
                 // Returns false if the bot is currently not capturing audio
-                if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Capturing)
+                if (botInstance.Recorder != null && botInstance.Recorder.CaptureState != CaptureState.Capturing)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is not streaming"), ephemeral: true);
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.Command.Name, ctx.Member.Username);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot not capturing", ctx.Command.Name, ctx.Member!.Username);
                     return false;
                 }
             }
@@ -147,10 +129,10 @@ namespace TEASLibrary
             if (checkBotNotStreaming)
             {
                 // Returns false if the bot is currently capturing audio
-                if (botInstance.Capture != null && botInstance.Capture.CaptureState != CaptureState.Stopped)
+                if (botInstance.Recorder != null && botInstance.Recorder.CaptureState != CaptureState.Stopped)
                 {
                     await ctx.RespondAsync(GenerateEmbed(DiscordColor.Red, "Bot is already streaming"), ephemeral: true);
-                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.Command.Name, ctx.Member.Username);
+                    ctx.Client.Logger.LogWarning("Could not execute command {CommandName} issued by {User} - Bot already capturing", ctx.Command.Name, ctx.Member!.Username);
                     return false;
                 }
             }

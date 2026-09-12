@@ -2,7 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Microsoft.Extensions.Logging;
 using CommandLine;
 using Spectre.Console;
 using Serilog;
@@ -80,12 +79,13 @@ namespace TEASConsole
             var logLevelSwitch = new LoggingLevelSwitch();
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.ControlledBy(logLevelSwitch)
+                .MinimumLevel.Override("System.Net", Serilog.Events.LogEventLevel.Warning) // Suppress HTTP request/response logs
                 .WriteTo.Spectre()
                 .CreateLogger();
             Log.Debug("TEASConsole, version {0}", appVersion.ToString(3));
 
 
-            // BEGINN PARSING OF COMMAND LINE OPTIONS
+            // BEGIN PARSING OF COMMAND LINE OPTIONS
             string configFile = "";
             string guildID = "";
             string botToken = "";
@@ -116,7 +116,7 @@ namespace TEASConsole
             if (verbose)
             {
                 logLevelSwitch.MinimumLevel = Serilog.Events.LogEventLevel.Debug;
-
+                
                 // Log options parsed from the CLI if debug logs are enabled
                 string parsedConfigs = "Config parsed from CLI: ";
                 parsedConfigs += $"Config({configFile}) ";

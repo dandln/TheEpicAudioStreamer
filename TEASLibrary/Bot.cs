@@ -1,14 +1,15 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System.ComponentModel;
-using DSharpPlus;
-using DSharpPlus.Entities;
+﻿using DSharpPlus;
 using DSharpPlus.Commands;
-using DSharpPlus.VoiceNext;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Entities;
+using DSharpPlus.Voice;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NAudio.CoreAudioApi;
 using NAudio.Wave;
 using Serilog;
-using DSharpPlus.Commands.Processors.SlashCommands;
+using System.Buffers;
+using System.ComponentModel;
 
 namespace TEASLibrary
 {
@@ -28,9 +29,9 @@ namespace TEASLibrary
         public MMDevice? AudioDevice { get; private set; }
 
         /// <summary>
-        /// The capture instance for the audio device
+        /// The recorder instance for the audio device
         /// </summary>
-        public WasapiLoopbackCapture? Capture { get; private set; }
+        public WasapiRecorder? Recorder { get; private set; }
 
         /// <summary>
         /// The bot configuration in use by the instance
@@ -50,9 +51,17 @@ namespace TEASLibrary
         /// <summary>
         /// Stores the current connection object from a voice channel connection
         /// </summary>
-        public VoiceNextConnection? CurrentConnection { get; set; } = null;
+        public VoiceConnection? CurrentConnection { get; set; } = null;
 
-        private EventHandler<WaveInEventArgs>? AudioHandler;
+        /// <summary>
+        /// Stores the current DSharppPlus Audio Writer
+        /// </summary>
+        public AudioWriter? CurrentAudioWriter { get; private set; } = null;
+
+        /// <summary>
+        /// The event handler for when audio data is available from the capture device
+        /// </summary>
+        private CaptureDataAvailableHandler? AudioHandler;
 
         /// <summary>
         /// Constructs a new Bot object with the given parameters
@@ -63,18 +72,14 @@ namespace TEASLibrary
         public Bot(ConfigManager botConfig, MMDevice? audioDevice = null, bool verbose = false)
         {
             BotConfig = botConfig;
-            ChangeAudioDevice(audioDevice);
+            AudioDevice = audioDevice;
 
             // Create Discord configuration
             DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(BotConfig.BotToken, DiscordIntents.AllUnprivileged);
             builder.ConfigureLogging(loggingBuilder => loggingBuilder.AddSerilog());
 
-            // Set debug log level if verbose is set
-            if (verbose == true)
-                builder.SetLogLevel(LogLevel.Debug);
-
-            // Indicate the use of voicenext
-            builder.UseVoiceNext(new VoiceNextConfiguration());
+            // Indicate the use of DSharpPlus.Voice
+            builder.UseVoice();
 
             builder.ConfigureServices(services => services.AddSingleton<Bot>(this).BuildServiceProvider());
 
@@ -171,51 +176,25 @@ namespace TEASLibrary
         private async void AutoConnectToVoice()
         {
             CurrentConnection = await DefaultChannel!.ConnectAsync();
-            var stream = CurrentConnection.GetTransmitSink();
+            CurrentAudioWriter = CurrentConnection.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
-            // If audio device and capture instance are set, begin streaming
-            if (Capture != null && AudioDevice != null)
+            // If audio device is set, begin streaming
+            if (AudioDevice != null)
             {
-                // Initialise event handler for audio captured
-                AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => SlashCommands.AudioDataAvilableEventHander(s, e, stream, Capture));
-                Capture.DataAvailable += AudioHandler;
-                Capture.StartRecording();
+                // Initialise audio device recorder, event handler, and start recording
+                Recorder = Utils.InitializeAudioRecorder(AudioDevice);
+                AudioHandler = new CaptureDataAvailableHandler((b, f, p, q) => SlashCommands.AudioDataAvilableEventHander(b, CurrentAudioWriter));
+                Recorder!.DataAvailable += AudioHandler;
+                Recorder!.StartRecording();
+
                 Discord.Logger.LogInformation("Bot connected to default channel {0} and started streaming", DefaultChannel!.Name);
             }
             else
                 Discord.Logger.LogInformation("Bot connected to default channel {0}", DefaultChannel!.Name);
         }
 
-        /// <summary>
-        /// Updates the audio device the application is using to stream audio and creates a new
-        /// capture instance if the device is not null
-        /// </summary>
-        /// <param name="audioDevice">The new device to use, can be null if no device is used/available</param>
-        public void ChangeAudioDevice(MMDevice? audioDevice)
-        {
-            bool restartRecording = false;
-            if(Capture != null && Capture.CaptureState == CaptureState.Capturing)
-            {
-                if (Capture.CaptureState == CaptureState.Capturing)
-                {
-                    Capture.StopRecording();
-                    restartRecording = true;
-                }
-                Capture.Dispose();
-            }
-
-            AudioDevice = audioDevice;
-
-            if (AudioDevice != null)   
-                Capture = new WasapiLoopbackCapture(audioDevice);
-
-            if (restartRecording && Capture != null)
-                Capture.StartRecording();
-        }
-
         internal class SlashCommands
         {
-
             /// <summary>
             /// Bot object passed on to the commands
             /// </summary>
@@ -236,15 +215,8 @@ namespace TEASLibrary
                 {
                     BotInstance.CurrentConnection = await channel.ConnectAsync();
 
-                    // Open transmit stream
-                    var stream = BotInstance.CurrentConnection.GetTransmitSink();
-
-                    if (BotInstance.Capture != null && BotInstance.AudioDevice != null)
-                    {
-                        // Initialise event handler for audio captured
-                        BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture));
-                        BotInstance.Capture.DataAvailable += BotInstance.AudioHandler;
-                    }
+                    // Get audio writer
+                    BotInstance.CurrentAudioWriter = BotInstance.CurrentConnection.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
                     if (channel.Parent is not null)
                     {
@@ -271,7 +243,12 @@ namespace TEASLibrary
                 if (!await Utils.CheckCommandFeasibilityAsync(ctx, BotInstance, checkPermissions: true, checkBotConnected:true, checkDeviceSelected:true, checkBotNotStreaming:true))
                     return;
 
-                BotInstance.Capture!.StartRecording();
+                // Initialise audio device recorder, event handler, and start recording
+                BotInstance.Recorder = Utils.InitializeAudioRecorder(BotInstance.AudioDevice);
+                BotInstance.AudioHandler = new CaptureDataAvailableHandler((b, f, p, q) => AudioDataAvilableEventHander(b, BotInstance.CurrentAudioWriter));
+                BotInstance.Recorder!.DataAvailable += BotInstance.AudioHandler;
+                BotInstance.Recorder!.StartRecording();
+
                 await ctx.RespondAsync(Utils.GenerateEmbed(DiscordColor.Green, $"Capturing and streaming from device **{BotInstance.AudioDevice!.FriendlyName}**"));
                 ctx.Client.Logger.LogInformation($"Capturing and streaming from device {BotInstance.AudioDevice!.FriendlyName}");
             }
@@ -289,15 +266,15 @@ namespace TEASLibrary
                 {
                     BotInstance.CurrentConnection = await channel.ConnectAsync();
 
-                    // Open transmit stream
-                    var stream = BotInstance.CurrentConnection.GetTransmitSink();
+                    // Get audio writer
+                    BotInstance.CurrentAudioWriter = BotInstance.CurrentConnection.CreateAudioWriter(AudioFormat.S16LE48KHzStereoPCM);
 
-                    // Initialise event handler for audio captured
-                    BotInstance.AudioHandler = new EventHandler<WaveInEventArgs>((s, e) => AudioDataAvilableEventHander(s, e, stream, BotInstance.Capture!));
-                    BotInstance.Capture!.DataAvailable += BotInstance.AudioHandler;
+                    // Initialise audio device recorder, event handler, and start recording
+                    BotInstance.Recorder = Utils.InitializeAudioRecorder(BotInstance.AudioDevice);
+                    BotInstance.AudioHandler = new CaptureDataAvailableHandler((b, f, p, q) => AudioDataAvilableEventHander(b, BotInstance.CurrentAudioWriter));
+                    BotInstance.Recorder!.DataAvailable += BotInstance.AudioHandler;
+                    BotInstance.Recorder!.StartRecording();
 
-                    // Start capturing
-                    BotInstance.Capture.StartRecording();
                     if (channel.Parent is null)
                     {
                         await ctx.RespondAsync(Utils.GenerateEmbed(DiscordColor.Green, $"Connected to **{channel.Name}** and streaming from device **{BotInstance.AudioDevice!.FriendlyName}**"));
@@ -317,9 +294,14 @@ namespace TEASLibrary
             {
                 if (!await Utils.CheckCommandFeasibilityAsync(ctx, BotInstance, checkPermissions: true, checkBotConnected: true, checkBotStreaming: true))
                     return;
+                
+                // Stop capturing and dispose recorder
+                BotInstance.Recorder!.StopRecording();
+                BotInstance.Recorder.Dispose();
 
-                // Stop capturing
-                BotInstance.Capture!.StopRecording();
+                // Signal silence to voice connection
+                BotInstance.CurrentAudioWriter!.SignalSilence();
+
                 await ctx.RespondAsync(Utils.GenerateEmbed(DiscordColor.Green, "Stopped streaming"));
                 ctx.Client.Logger.LogInformation("Stopped streaming");
             }
@@ -332,37 +314,32 @@ namespace TEASLibrary
                     return;
 
                 // Stop capturing
-                if (BotInstance.Capture != null && BotInstance.Capture.CaptureState != CaptureState.Stopped)
+                if (BotInstance.Recorder != null && BotInstance.Recorder.CaptureState != CaptureState.Stopped)
                 {
-                    // Stop capturing
-                    BotInstance.Capture.StopRecording();
-                }
-                if (BotInstance.Capture != null)
-                {
+                    BotInstance.Recorder.StopRecording();
                     // Unsubscribe from event
-                    BotInstance.Capture.DataAvailable -= BotInstance.AudioHandler;
+                    BotInstance.Recorder.DataAvailable -= BotInstance.AudioHandler;
                     BotInstance.AudioHandler = null;
+                    // Dispose of the recorder object
+                    BotInstance.Recorder.Dispose();
                 }
 
                 // Disconnect
-                BotInstance.CurrentConnection!.Disconnect();
+                await BotInstance.CurrentConnection!.DisconnectAsync();
                 BotInstance.CurrentConnection = null;
+                BotInstance.CurrentAudioWriter = null;
                 await ctx.RespondAsync(Utils.GenerateEmbed(DiscordColor.Green, "Disconnected"));
                 ctx.Client.Logger.LogInformation("Disconnected");
             }
 
             /// <summary>
-            /// Handles captured audio from a Wasapi device by converting it to PCM16 and writing it into a voice transmit sink
+            /// Handles captured audio from a the recording device by writing it into the voice channel AudioWriter
             /// </summary>
-            /// <param name="sink">The Discord VoiceTransmitSink instance</param>
-            /// <param name="device">The WasapiLoopbackCapture device</param>
-            internal static async void AudioDataAvilableEventHander(object s, WaveInEventArgs e, VoiceTransmitSink sink, WasapiLoopbackCapture device)
+            /// <param name="writer">The AudioWriter instance</param>
+            internal static void AudioDataAvilableEventHander(ReadOnlySpan<byte> b, AudioWriter writer)
             {
-                // If audio data is available, convert it into PCM16 format and write it into the sink.
-                if (e.Buffer.Length > 0)
-                {
-                    await sink.WriteAsync(Utils.AudioToPCM16(e.Buffer, e.BytesRecorded, device.WaveFormat));
-                }
+                if (b.Length > 0)
+                    writer.Write(b);
             }
         }
     }
