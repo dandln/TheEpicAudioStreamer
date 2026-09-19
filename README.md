@@ -21,12 +21,12 @@ To run TEAS, you will need two things: A **bot token** for a Discord application
 1. Go to the [Applications](https://discord.com/developers/applications) section of the Discord Developer Portal and click the button "New Application" in the top right corner.
 2. Enter a name for your application, which should be the same as the one you want your bot to have, accept the ToS and click "Create".
 3. You can enter a description and upload an image for your application, this will be displayed when you invite the bot to your server.
-4. Go to "Bot" in the settings sidebar, click "Add Bot" and acknowledge the warning with "Yes, do it!"
-5. Deselect the "Public Bot" setting, leave the rest of the options untouched.
-6. Head back to the "General Information" tab and make a note of your "Application ID".
-7. Replace `[APP_ID]` in the following URL with your Application ID and access it to invite your bot to your server.<br/>`https://discord.com/api/oauth2/authorize?client_id=[APP_ID]&permissions=2150648832&scope=bot%20applications.commands`<br />
+4. Go to "Installation" in the settings sidebar. Deselect "User Install" as an installation context, set the "Install Link" option to "None" and save your changes.
+7. Go to "Bot" in the settings sidebar, scroll down and deselect the "Public Bot" setting. Leave the rest of the options untouched.
+9. Head back to the "General Information" tab and make a note of your "Application ID".
+10. Replace `[APP_ID]` in the following URL with your Application ID and access it to invite your bot to your server.<br/>`https://discord.com/api/oauth2/authorize?client_id=[APP_ID]&permissions=2150648832&scope=bot%20applications.commands`<br />
 This gives your bot the following permissions on your server: `Read Messages/View Channels`, `Send Messages`, `Embed Links`, `Use Slash Commands`, `Connect`, `Speak`
-7. Go to the "Bot" section, click on "View Token", and copy it somewhere safe. Note that Discord will only show you this once, if you lose the token you will need to generate a new one.
+7. Go to the "Bot" section, click on "Reset Token", and copy the newly created token somewhere safe. Note that Discord will only show you this once, if you lose the token you will need to generate a new one.
 
 ### Retrieving the Guild ID
 1. In Discord, go to User Settings -> Advanced and make sure that "Developer Mode" is enabled.
